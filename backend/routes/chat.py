@@ -10,7 +10,6 @@ from pydantic import BaseModel
 router = APIRouter(tags=["chat"])
 
 NVIDIA_BASE = "https://integrate.api.nvidia.com/v1"
-
 ROUTER_MODEL = "meta/llama-3.1-8b-instruct"
 
 def now():
@@ -42,9 +41,7 @@ async def detect_mode(prompt: str) -> str:
         temperature=0.0,
     )
     result = resp.choices[0].message.content.strip().lower()
-    if result not in ("chat", "code", "image"):
-        return "chat"
-    return result
+    return result if result in ("chat", "code", "image") else "chat"
 
 @router.post("/route")
 async def route_task(body: RouteRequest):
@@ -60,21 +57,30 @@ async def chat_stream(body: ChatRequest):
     msg_id = str(uuid.uuid4())
     full_response = []
 
+    create_kwargs = dict(
+        model=model,
+        messages=[{"role": m.role, "content": m.content} for m in body.messages],
+        max_tokens=body.max_tokens,
+        temperature=body.temperature,
+        top_p=body.top_p,
+        frequency_penalty=body.frequency_penalty,
+        presence_penalty=body.presence_penalty,
+        stream=True,
+    )
+    if body.top_k is not None:
+        create_kwargs["extra_body"] = {"top_k": body.top_k}
+
     async def generate():
+        char_count = 0
         try:
-            stream = await client.chat.completions.create(
-                model=model,
-                messages=[{"role": m.role, "content": m.content} for m in body.messages],
-                max_tokens=4096,
-                temperature=0.7,
-                stream=True,
-            )
+            stream = await client.chat.completions.create(**create_kwargs)
             async for chunk in stream:
                 if not chunk.choices:
                     continue
                 delta = chunk.choices[0].delta.content or ""
                 if delta:
                     full_response.append(delta)
+                    char_count += len(delta)
                     yield f"data: {json.dumps({'delta': delta})}\n\n"
         except Exception as e:
             import traceback
@@ -83,6 +89,7 @@ async def chat_stream(body: ChatRequest):
             return
 
         full_text = "".join(full_response)
+        output_tokens = max(1, char_count // 4)
         try:
             async with await get_db() as db:
                 user_msg = body.messages[-1]
@@ -103,7 +110,7 @@ async def chat_stream(body: ChatRequest):
             import traceback
             traceback.print_exc()
 
-        yield f"data: {json.dumps({'done': True, 'id': msg_id})}\n\n"
+        yield f"data: {json.dumps({'done': True, 'id': msg_id, 'output_tokens': output_tokens})}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
@@ -130,7 +137,6 @@ async def name_conversation(body: NameRequest):
             temperature=0.7,
         )
         title = resp.choices[0].message.content.strip().strip('"\'')
-        # Update in DB
         async with await get_db() as db:
             await db.execute(
                 "UPDATE conversations SET title=?, updated_at=? WHERE id=?",

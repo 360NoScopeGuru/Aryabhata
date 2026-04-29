@@ -2,7 +2,8 @@ import { useCallback, useRef, useState } from 'react'
 
 interface StreamOptions {
   onDelta: (delta: string) => void
-  onDone?: (id?: string) => void
+  onFirstToken?: (ttftMs: number) => void
+  onDone?: (id?: string, outputTokens?: number) => void
   onError?: (err: string) => void
 }
 
@@ -14,6 +15,9 @@ export function useStream() {
     abortRef.current?.abort()
     abortRef.current = new AbortController()
     setStreaming(true)
+
+    const startTime = Date.now()
+    let firstToken = false
 
     try {
       const res = await fetch(url, {
@@ -43,8 +47,14 @@ export function useStream() {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6))
-              if (data.delta) opts.onDelta(data.delta)
-              if (data.done) opts.onDone?.(data.id)
+              if (data.delta) {
+                if (!firstToken) {
+                  firstToken = true
+                  opts.onFirstToken?.(Date.now() - startTime)
+                }
+                opts.onDelta(data.delta)
+              }
+              if (data.done) opts.onDone?.(data.id, data.output_tokens)
             } catch {}
           }
         }

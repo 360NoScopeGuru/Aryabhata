@@ -14,7 +14,7 @@ def now():
     return datetime.now(timezone.utc).isoformat()
 
 CODE_SYSTEM = (
-    "You are an expert programming assistant powered by Llama 3.1 405B. "
+    "You are an expert programming assistant. "
     "Provide clear, production-ready code. "
     "Always wrap code blocks in triple backticks with the language name. "
     "Explain your approach briefly before the code."
@@ -23,7 +23,6 @@ CODE_SYSTEM = (
 @router.post("/code/stream")
 async def code_stream(body: CodeRequest):
     model = body.model
-    # Read key at request time — always picks up loaded env vars
     api_key = os.getenv("NVIDIA_API_KEY_CODE")
     client = AsyncOpenAI(base_url=NVIDIA_BASE, api_key=api_key)
 
@@ -37,19 +36,30 @@ async def code_stream(body: CodeRequest):
     messages = [{"role": "system", "content": system_msg}] + \
                [{"role": m.role, "content": m.content} for m in body.messages]
 
+    create_kwargs = dict(
+        model=model,
+        messages=messages,
+        max_tokens=body.max_tokens,
+        temperature=body.temperature,
+        top_p=body.top_p,
+        frequency_penalty=body.frequency_penalty,
+        presence_penalty=body.presence_penalty,
+        stream=True,
+    )
+    if body.top_k is not None:
+        create_kwargs["extra_body"] = {"top_k": body.top_k}
+
     async def generate():
+        char_count = 0
         try:
-            stream = await client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_tokens=4096,
-                temperature=0.2,
-                stream=True,
-            )
+            stream = await client.chat.completions.create(**create_kwargs)
             async for chunk in stream:
+                if not chunk.choices:
+                    continue
                 delta = chunk.choices[0].delta.content or ""
                 if delta:
                     full_response.append(delta)
+                    char_count += len(delta)
                     yield f"data: {json.dumps({'delta': delta})}\n\n"
         except Exception as e:
             err_msg = f"Stream error: {type(e).__name__}: {e}"
@@ -58,6 +68,7 @@ async def code_stream(body: CodeRequest):
             return
 
         full_text = "".join(full_response)
+        output_tokens = max(1, char_count // 4)
         try:
             async with await get_db() as db:
                 user_msg = body.messages[-1]
@@ -74,9 +85,9 @@ async def code_stream(body: CodeRequest):
                     (now(), model, body.conversation_id)
                 )
                 await db.commit()
-        except Exception as e:
+        except Exception:
             traceback.print_exc()
 
-        yield f"data: {json.dumps({'done': True, 'id': msg_id})}\n\n"
+        yield f"data: {json.dumps({'done': True, 'id': msg_id, 'output_tokens': output_tokens})}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")

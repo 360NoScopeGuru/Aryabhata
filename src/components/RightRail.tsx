@@ -1,133 +1,217 @@
-import { useAppStore, CHAT_MODELS, CODE_MODELS, IMAGE_MODELS, type Mode } from '@/store/appStore'
-
-const THEMES = [
-  { id: 'astronomical', label: 'Astro',  accent: '#7ad7ff', bg: '#0a1428' },
-  { id: 'void',         label: 'Void',   accent: '#b87fff', bg: '#080810' },
-  { id: 'solar',        label: 'Solar',  accent: '#ffb84d', bg: '#130d00' },
-  { id: 'matrix',       label: 'Matrix', accent: '#00ff41', bg: '#010c01' },
-  { id: 'aurora',       label: 'Aurora', accent: '#48dcc3', bg: '#060f18' },
-]
-
-const FONTS = [
-  { id: 'system',     label: 'System'  },
-  { id: 'instrument', label: 'Mono'    },
-  { id: 'modern',     label: 'Inter'   },
-  { id: 'technical',  label: 'Plex'    },
-  { id: 'space',      label: 'Grotesk' },
-]
+import { useAppStore, MIXING_MODELS, IMAGE_MODELS, getActiveModel, type SamplingPreset } from '@/store/appStore'
 
 const SIZES = [
-  { label: '1:1',    w: 1024, h: 1024 },
-  { label: '1:1 HD', w: 1344, h: 1344 },
-  { label: '16:9',   w: 1344, h: 768  },
-  { label: '9:16',   w: 768,  h: 1344 },
-  { label: '4:3',    w: 1152, h: 896  },
+  { label: '1:1',  w: 1024, h: 1024 },
+  { label: '16:9', w: 1344, h: 768  },
+  { label: '9:16', w: 768,  h: 1344 },
+  { label: '4:3',  w: 1152, h: 896  },
 ]
-
 const QUALITY = [
-  { label: 'Draft',    steps: 20 },
-  { label: 'Std',      steps: 35 },
-  { label: 'HD',       steps: 50 },
+  { label: 'Draft', steps: 20 },
+  { label: 'Std',   steps: 35 },
+  { label: 'HD',    steps: 50 },
 ]
+const LANGUAGES = ['python', 'javascript', 'typescript', 'rust', 'go', 'java', 'c', 'cpp', 'bash', 'sql', 'html', 'css']
 
-const LANGUAGES = ['python', 'javascript', 'typescript', 'rust', 'go', 'java', 'c', 'cpp', 'bash', 'sql', 'html', 'css', 'json']
+const PRESETS: { id: SamplingPreset; label: string }[] = [
+  { id: 'precise',  label: 'PRECISE'  },
+  { id: 'balanced', label: 'BALANCED' },
+  { id: 'creative', label: 'CREATIVE' },
+  { id: 'forensic', label: 'FORENSIC' },
+]
 
 export default function RightRail() {
   const {
-    mode, setMode,
+    mode,
+    telemetry, sessionTokens,
+    modelWeights,
+    samplingPreset, setSamplingPreset,
+    temperature, setTemperature,
+    topP, setTopP,
+    topK, setTopK,
+    frequencyPenalty, setFrequencyPenalty,
+    presencePenalty, setPresencePenalty,
+    maxTokens, setMaxTokens,
     autoRoute, setAutoRoute,
-    selectedChatModel, setSelectedChatModel,
-    selectedCodeModel, setSelectedCodeModel,
     selectedImageModel, setSelectedImageModel,
+    imageWidth, imageHeight, imageSteps, setImageSize, setImageSteps,
     codeLanguage, setCodeLanguage,
-    imageWidth, imageHeight, imageSteps,
-    setImageSize, setImageSteps,
-    sessionTokens,
-    conversations,
-    theme, setTheme,
-    font, setFont,
   } = useAppStore()
 
-  const activeModes: Mode[] = ['chat', 'code', 'image']
-  const models = mode === 'chat' ? CHAT_MODELS : mode === 'code' ? CODE_MODELS : IMAGE_MODELS
-  const selectedModel = mode === 'chat' ? selectedChatModel : mode === 'code' ? selectedCodeModel : selectedImageModel
-  const setModel = mode === 'chat' ? setSelectedChatModel : mode === 'code' ? setSelectedCodeModel : setSelectedImageModel
+  const activeModelId = mode !== 'image' ? getActiveModel(modelWeights, mode as 'chat' | 'code') : null
+  const activeModel = activeModelId ? MIXING_MODELS.find(m => m.id === activeModelId) : null
 
-  const currentSize = SIZES.find((s) => s.w === imageWidth && s.h === imageHeight) ?? SIZES[0]
-  const currentQuality = QUALITY.find((q) => q.steps === imageSteps) ?? QUALITY[1]
-
-  const tokenEstimate = Math.round(sessionTokens * 1.15)
+  const contextMax = 128000
+  const contextFill = Math.min(1, sessionTokens / contextMax)
+  const spark = telemetry.spark
 
   return (
     <aside className="rail-right">
-      {/* Mode selector */}
-      <div className="mode-tabs">
-        {activeModes.map((m) => (
-          <button
-            key={m}
-            className={`mode-tab ${mode === m ? 'active' : ''}`}
-            onClick={() => setMode(m)}
-          >
-            {m}
-          </button>
-        ))}
-      </div>
-
-      {/* Model */}
-      <div className="tele-block">
-        <div className="tele-head">
-          <h3>Model</h3>
-        </div>
-        {models.map((m) => (
-          <div
-            key={m.id}
-            className={`model-entry ${selectedModel === m.id ? 'selected' : ''}`}
-            onClick={() => setModel(m.id)}
-          >
-            <span className="mn">{m.label}</span>
-            <span className="mb">{m.badge}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Auto-route */}
-      <div className="tele-block">
-        <div className="tele-head">
-          <h3>Routing</h3>
-          {autoRoute && (
-            <span className="live-dot">
-              <i />
-              Live
-            </span>
-          )}
-        </div>
-        <div className="toggle-row" style={{ borderTop: 0 }}>
-          <span className="lbl">Auto-route mode</span>
-          <button
-            className={`tswitch ${autoRoute ? 'on' : ''}`}
-            onClick={() => setAutoRoute(!autoRoute)}
-          >
+      {/* Telemetry header */}
+      <div className="tele-header">
+        <h3>Telemetry</h3>
+        {telemetry.streaming && (
+          <div className="streaming-badge">
             <i />
-          </button>
-        </div>
-        {autoRoute && (
-          <p style={{ fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.1em', color: 'var(--ink-faint)', marginTop: '8px', lineHeight: 1.6 }}>
-            Task type detected automatically — switches between chat, code &amp; image.
-          </p>
+            Live
+          </div>
         )}
       </div>
 
-      {/* Code: language */}
+      {/* Big TPOT / TTFT numbers */}
+      <div className="tele-block">
+        <div className="tele-numbers">
+          <div className="tele-num">
+            <div className="tn-val">
+              {telemetry.tpot > 0 ? telemetry.tpot.toFixed(1) : '—'}
+              {telemetry.tpot > 0 && <span>t/s</span>}
+            </div>
+            <div className="tn-key">TPOT</div>
+          </div>
+          <div className="tele-num">
+            <div className="tn-val">
+              {telemetry.ttft > 0 ? telemetry.ttft : '—'}
+              {telemetry.ttft > 0 && <span>ms</span>}
+            </div>
+            <div className="tn-key">TTFT</div>
+          </div>
+        </div>
+
+        {/* Sparkline */}
+        <div className="spark-chart" style={{ marginTop: '10px' }}>
+          {spark.map((v, i) => (
+            <div key={i} className="spark-bar" style={{ height: `${Math.max(8, v)}%` }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Token / cost stats */}
+      <div className="tele-block">
+        <div className="tele-row">
+          <div className="tele-kv">
+            <span className="tk">Tokens</span>
+            <span className="tv">{telemetry.outputTokens.toLocaleString()}</span>
+          </div>
+          <div className="tele-kv">
+            <span className="tk">Cost</span>
+            <span className="tv">${telemetry.cost.toFixed(4)}</span>
+          </div>
+          <div className="tele-kv">
+            <span className="tk">CO₂</span>
+            <span className="tv">{telemetry.carbon.toFixed(1)}<sub>g</sub></span>
+          </div>
+          <div className="tele-kv">
+            <span className="tk">Session</span>
+            <span className="tv">{sessionTokens.toLocaleString()}</span>
+          </div>
+        </div>
+
+        {/* Context fill bar */}
+        <div className="ctx-bar-wrap">
+          <div className="ctx-bar-label">
+            <span>Context</span>
+            <span>{(contextFill * 100).toFixed(1)}%</span>
+          </div>
+          <div className="ctx-bar">
+            <div
+              className="ctx-bar-fill"
+              style={{
+                width: `${contextFill * 100}%`,
+                background: contextFill > 0.8 ? 'var(--warn)' : undefined,
+              }}
+            />
+          </div>
+          <div className="ctx-row">
+            <span>{sessionTokens.toLocaleString()} used</span>
+            <span>{contextMax.toLocaleString()} max</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Active engine */}
+      {activeModel && (
+        <div className="tele-block">
+          <div className="tele-block-label">Active Engine</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: activeModel.color, boxShadow: `0 0 8px ${activeModel.color}88`, flexShrink: 0 }} />
+            <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--ink)' }}>{activeModel.label}</span>
+            <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--ink-faint)', letterSpacing: '.12em', textTransform: 'uppercase' }}>{activeModel.speed}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Sampling presets */}
+      <div className="tele-block">
+        <div className="tele-block-label">Sampling Preset</div>
+        <div className="sampling-presets">
+          {PRESETS.map(p => (
+            <button
+              key={p.id}
+              className={`preset-btn ${samplingPreset === p.id ? 'active' : ''}`}
+              onClick={() => setSamplingPreset(p.id)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="sampling-param">
+          <div className="param-label">
+            <span>Temp</span>
+            <span className="pv">{temperature.toFixed(2)}</span>
+          </div>
+          <input type="range" className="param-slider" min={0} max={2} step={0.01}
+            value={temperature} onChange={e => setTemperature(Number(e.target.value))} />
+        </div>
+        <div className="sampling-param">
+          <div className="param-label">
+            <span>Top P</span>
+            <span className="pv">{topP.toFixed(2)}</span>
+          </div>
+          <input type="range" className="param-slider" min={0} max={1} step={0.01}
+            value={topP} onChange={e => setTopP(Number(e.target.value))} />
+        </div>
+        <div className="sampling-param">
+          <div className="param-label">
+            <span>Top K</span>
+            <span className="pv">{topK ?? 40}</span>
+          </div>
+          <input type="range" className="param-slider" min={1} max={200} step={1}
+            value={topK ?? 40} onChange={e => setTopK(Number(e.target.value))} />
+        </div>
+        <div className="sampling-param">
+          <div className="param-label">
+            <span>Freq Pen</span>
+            <span className="pv">{frequencyPenalty.toFixed(2)}</span>
+          </div>
+          <input type="range" className="param-slider" min={0} max={2} step={0.01}
+            value={frequencyPenalty} onChange={e => setFrequencyPenalty(Number(e.target.value))} />
+        </div>
+        <div className="sampling-param">
+          <div className="param-label">
+            <span>Pres Pen</span>
+            <span className="pv">{presencePenalty.toFixed(2)}</span>
+          </div>
+          <input type="range" className="param-slider" min={0} max={2} step={0.01}
+            value={presencePenalty} onChange={e => setPresencePenalty(Number(e.target.value))} />
+        </div>
+        <div className="sampling-param" style={{ marginBottom: 0 }}>
+          <div className="param-label">
+            <span>Max Tokens</span>
+            <span className="pv">{maxTokens}</span>
+          </div>
+          <input type="range" className="param-slider" min={256} max={16384} step={256}
+            value={maxTokens} onChange={e => setMaxTokens(Number(e.target.value))} />
+        </div>
+      </div>
+
+      {/* Code language */}
       {mode === 'code' && (
         <div className="tele-block">
-          <div className="tele-head"><h3>Language</h3></div>
+          <div className="tele-block-label">Language</div>
           <div className="chip-row">
-            {LANGUAGES.map((l) => (
-              <button
-                key={l}
-                className={`chip ${codeLanguage === l ? 'on' : ''}`}
-                onClick={() => setCodeLanguage(l)}
-              >
+            {LANGUAGES.map(l => (
+              <button key={l} className={`chip ${codeLanguage === l ? 'on' : ''}`} onClick={() => setCodeLanguage(l)}>
                 {l}
               </button>
             ))}
@@ -135,100 +219,54 @@ export default function RightRail() {
         </div>
       )}
 
-      {/* Image: size + quality */}
+      {/* Image controls */}
       {mode === 'image' && (
         <>
           <div className="tele-block">
-            <div className="tele-head"><h3>Image size</h3></div>
+            <div className="tele-block-label">Model</div>
+            {IMAGE_MODELS.map(m => (
+              <div
+                key={m.id}
+                className={`model-entry ${selectedImageModel === m.id ? 'selected' : ''}`}
+                onClick={() => setSelectedImageModel(m.id)}
+              >
+                <span className="mn">{m.label}</span>
+                <span className="mb">{m.badge}</span>
+              </div>
+            ))}
+          </div>
+          <div className="tele-block">
+            <div className="tele-block-label">Size</div>
             <div className="chip-row">
-              {SIZES.map((s) => (
-                <button
-                  key={s.label}
-                  className={`chip ${currentSize.label === s.label ? 'on' : ''}`}
-                  onClick={() => setImageSize(s.w, s.h)}
-                >
-                  {s.label}
-                </button>
+              {SIZES.map(s => (
+                <button key={s.label} className={`chip ${imageWidth === s.w && imageHeight === s.h ? 'on' : ''}`}
+                  onClick={() => setImageSize(s.w, s.h)}>{s.label}</button>
               ))}
             </div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--ink-faint)', marginTop: '8px', letterSpacing: '.1em' }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--ink-faint)', marginTop: '6px', letterSpacing: '.1em' }}>
               {imageWidth} × {imageHeight} px
             </div>
           </div>
           <div className="tele-block">
-            <div className="tele-head"><h3>Quality</h3></div>
+            <div className="tele-block-label">Quality</div>
             <div className="chip-row">
-              {QUALITY.map((q) => (
-                <button
-                  key={q.label}
-                  className={`chip ${currentQuality.label === q.label ? 'on' : ''}`}
-                  onClick={() => setImageSteps(q.steps)}
-                >
-                  {q.label}
-                </button>
+              {QUALITY.map(q => (
+                <button key={q.label} className={`chip ${imageSteps === q.steps ? 'on' : ''}`}
+                  onClick={() => setImageSteps(q.steps)}>{q.label}</button>
               ))}
-            </div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--ink-faint)', marginTop: '8px', letterSpacing: '.1em' }}>
-              {imageSteps} inference steps
             </div>
           </div>
         </>
       )}
 
-      {/* Appearance */}
-      <div className="tele-block">
-        <div className="tele-head"><h3>Theme</h3></div>
-        <div className="swatch-row" style={{ marginBottom: '12px' }}>
-          {THEMES.map((t) => (
-            <button
-              key={t.id}
-              className={`swatch ${theme === t.id ? 'on' : ''}`}
-              title={t.label}
-              onClick={() => setTheme(t.id)}
-              style={{ background: t.bg, boxShadow: theme === t.id ? `0 0 0 2px ${t.accent}` : 'none' }}
-            />
-          ))}
-        </div>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: '8.5px', letterSpacing: '.18em', color: 'var(--ink-faint)', textTransform: 'uppercase', marginBottom: '10px' }}>
-          {THEMES.find((t) => t.id === theme)?.label ?? theme}
-        </div>
-
-        <div className="tele-head" style={{ marginTop: '6px' }}><h3>Font</h3></div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-          {FONTS.map((f) => (
-            <button
-              key={f.id}
-              className={`font-chip ${font === f.id ? 'on' : ''}`}
-              onClick={() => setFont(f.id)}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Stats */}
+      {/* Auto-route toggle */}
       <div className="tele-block" style={{ marginTop: 'auto' }}>
-        <div className="tele-head">
-          <h3>Session</h3>
+        <div className="toggle-row" style={{ borderTop: 0 }}>
+          <span className="lbl">Auto-Route</span>
+          <button className={`tswitch ${autoRoute ? 'on' : ''}`} onClick={() => setAutoRoute(!autoRoute)}>
+            <i />
+          </button>
         </div>
-        <div className="kv-grid">
-          <div className="kv">
-            <span className="k">Tokens</span>
-            <span className="v">{tokenEstimate.toLocaleString()}<small>est</small></span>
-          </div>
-          <div className="kv">
-            <span className="k">Sessions</span>
-            <span className="v">{conversations.length}</span>
-          </div>
-        </div>
-        {tokenEstimate > 0 && (
-          <div className="spark" style={{ marginTop: '12px' }}>
-            {Array.from({ length: 16 }, (_, i) => (
-              <span key={i} style={{ height: `${Math.max(10, Math.random() * 100)}%` }} />
-            ))}
-          </div>
-        )}
       </div>
     </aside>
   )

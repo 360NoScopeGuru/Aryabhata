@@ -10,12 +10,24 @@ class ChatRequest(BaseModel):
     messages: List[Message]
     model: str = "meta/llama-3.1-70b-instruct"
     auto_route: bool = False
+    temperature: float = 0.7
+    top_p: float = 0.95
+    top_k: Optional[int] = None
+    frequency_penalty: float = 0.0
+    presence_penalty: float = 0.0
+    max_tokens: int = 4096
 
 class CodeRequest(BaseModel):
     conversation_id: str
     messages: List[Message]
     model: str = "meta/llama-3.1-405b-instruct"
     language: Optional[str] = None
+    temperature: float = 0.2
+    top_p: float = 0.95
+    top_k: Optional[int] = None
+    frequency_penalty: float = 0.0
+    presence_penalty: float = 0.0
+    max_tokens: int = 4096
 
 class ImageRequest(BaseModel):
     conversation_id: str

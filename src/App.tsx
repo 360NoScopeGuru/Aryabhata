@@ -6,6 +6,7 @@ import RightRail from '@/components/RightRail'
 import ChatMode from '@/components/ChatMode'
 import CodeMode from '@/components/CodeMode'
 import ImageMode from '@/components/ImageMode'
+import StatusBar from '@/components/StatusBar'
 import { v4 as uuid } from 'uuid'
 
 const MODE_LABELS: Record<string, string> = {
@@ -44,12 +45,11 @@ const RegMark = ({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) => {
 }
 
 export default function App() {
-  const { mode, setMode, activeConversationId, setActiveConversation, addConversation, removeConversation, setConversations, theme, font } = useAppStore()
+  const { mode, setMode, activeConversationId, setActiveConversation, addConversation, removeConversation, setConversations, theme } = useAppStore()
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-    document.documentElement.dataset.font = font
-  }, [theme, font])
+  }, [theme])
 
   useEffect(() => {
     fetch('/api/conversations')
@@ -149,26 +149,7 @@ export default function App() {
 
       <RightRail />
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="footer-cell">
-          <span>Aryabhata</span>
-          <span className="v">v0.2</span>
-        </div>
-        <div className="footer-cell">
-          <span>API</span>
-          <span className="v">NVIDIA Build</span>
-        </div>
-        <div className="footer-cell">
-          <span>Mode</span>
-          <span className="v">{mode.toUpperCase()}</span>
-        </div>
-        <div className="footer-cell right">
-          <span className="v" style={{ fontSize: '9px', letterSpacing: '.1em', animation: 'pulse 3s ease-in-out infinite', color: 'var(--ok)' }}>
-            ● Online
-          </span>
-        </div>
-      </footer>
+      <StatusBar />
     </div>
   )
 }

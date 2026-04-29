@@ -1,4 +1,4 @@
-import { useAppStore, MIXING_MODELS, IMAGE_MODELS, getActiveModel, type SamplingPreset } from '@/store/appStore'
+import { useAppStore, MIXING_MODELS, IMAGE_MODELS, getActiveModel, isBlendMode, type SamplingPreset } from '@/store/appStore'
 
 const SIZES = [
   { label: '1:1',  w: 1024, h: 1024 },
@@ -24,7 +24,7 @@ export default function RightRail() {
   const {
     mode,
     telemetry, sessionTokens,
-    modelWeights,
+    selectedModels,
     samplingPreset, setSamplingPreset,
     temperature, setTemperature,
     topP, setTopP,
@@ -38,7 +38,8 @@ export default function RightRail() {
     codeLanguage, setCodeLanguage,
   } = useAppStore()
 
-  const activeModelId = mode !== 'image' ? getActiveModel(modelWeights, mode as 'chat' | 'code') : null
+  const blend = isBlendMode(selectedModels)
+  const activeModelId = mode !== 'image' ? getActiveModel(selectedModels) : null
   const activeModel = activeModelId ? MIXING_MODELS.find(m => m.id === activeModelId) : null
 
   const contextMax = 128000
@@ -47,18 +48,14 @@ export default function RightRail() {
 
   return (
     <aside className="rail-right">
-      {/* Telemetry header */}
       <div className="tele-header">
         <h3>Telemetry</h3>
         {telemetry.streaming && (
-          <div className="streaming-badge">
-            <i />
-            Live
-          </div>
+          <div className="streaming-badge"><i />Live</div>
         )}
       </div>
 
-      {/* Big TPOT / TTFT numbers */}
+      {/* TPOT / TTFT */}
       <div className="tele-block">
         <div className="tele-numbers">
           <div className="tele-num">
@@ -76,8 +73,6 @@ export default function RightRail() {
             <div className="tn-key">TTFT</div>
           </div>
         </div>
-
-        {/* Sparkline */}
         <div className="spark-chart" style={{ marginTop: '10px' }}>
           {spark.map((v, i) => (
             <div key={i} className="spark-bar" style={{ height: `${Math.max(8, v)}%` }} />
@@ -85,16 +80,12 @@ export default function RightRail() {
         </div>
       </div>
 
-      {/* Token / cost stats */}
+      {/* Stats */}
       <div className="tele-block">
         <div className="tele-row">
           <div className="tele-kv">
             <span className="tk">Tokens</span>
             <span className="tv">{telemetry.outputTokens.toLocaleString()}</span>
-          </div>
-          <div className="tele-kv">
-            <span className="tk">Cost</span>
-            <span className="tv">${telemetry.cost.toFixed(4)}</span>
           </div>
           <div className="tele-kv">
             <span className="tk">CO₂</span>
@@ -106,103 +97,76 @@ export default function RightRail() {
           </div>
         </div>
 
-        {/* Context fill bar */}
         <div className="ctx-bar-wrap">
           <div className="ctx-bar-label">
             <span>Context</span>
             <span>{(contextFill * 100).toFixed(1)}%</span>
           </div>
           <div className="ctx-bar">
-            <div
-              className="ctx-bar-fill"
-              style={{
-                width: `${contextFill * 100}%`,
-                background: contextFill > 0.8 ? 'var(--warn)' : undefined,
-              }}
-            />
+            <div className="ctx-bar-fill" style={{ width: `${contextFill * 100}%`, background: contextFill > 0.8 ? 'var(--warn)' : undefined }} />
           </div>
           <div className="ctx-row">
             <span>{sessionTokens.toLocaleString()} used</span>
-            <span>{contextMax.toLocaleString()} max</span>
+            <span>128K max</span>
           </div>
         </div>
       </div>
 
-      {/* Active engine */}
-      {activeModel && (
+      {/* Active engine (or blend indicator) */}
+      {mode !== 'image' && (
         <div className="tele-block">
-          <div className="tele-block-label">Active Engine</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: activeModel.color, boxShadow: `0 0 8px ${activeModel.color}88`, flexShrink: 0 }} />
-            <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--ink)' }}>{activeModel.label}</span>
-            <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--ink-faint)', letterSpacing: '.12em', textTransform: 'uppercase' }}>{activeModel.speed}</span>
-          </div>
+          <div className="tele-block-label">{blend ? 'Blend' : 'Active Engine'}</div>
+          {blend ? (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {selectedModels.map(id => {
+                const m = MIXING_MODELS.find(x => x.id === id)
+                if (!m) return null
+                return (
+                  <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 7px', border: `.5px solid ${m.color}55`, borderRadius: '999px', fontFamily: 'var(--mono)', fontSize: '9px' }}>
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: m.color }} />
+                    <span style={{ color: 'var(--ink-dim)' }}>{m.label}</span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : activeModel ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: activeModel.color, boxShadow: `0 0 8px ${activeModel.color}88`, flexShrink: 0 }} />
+              <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--ink)' }}>{activeModel.label}</span>
+              <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--ink-faint)', textTransform: 'uppercase' }}>{activeModel.speed}</span>
+            </div>
+          ) : null}
         </div>
       )}
 
-      {/* Sampling presets */}
+      {/* Sampling */}
       <div className="tele-block">
         <div className="tele-block-label">Sampling Preset</div>
         <div className="sampling-presets">
           {PRESETS.map(p => (
-            <button
-              key={p.id}
-              className={`preset-btn ${samplingPreset === p.id ? 'active' : ''}`}
-              onClick={() => setSamplingPreset(p.id)}
-            >
+            <button key={p.id} className={`preset-btn ${samplingPreset === p.id ? 'active' : ''}`} onClick={() => setSamplingPreset(p.id)}>
               {p.label}
             </button>
           ))}
         </div>
 
-        <div className="sampling-param">
-          <div className="param-label">
-            <span>Temp</span>
-            <span className="pv">{temperature.toFixed(2)}</span>
+        {[
+          { label: 'Temp',     val: temperature.toFixed(2), min: 0,   max: 2,     step: 0.01, set: setTemperature,     cur: temperature },
+          { label: 'Top P',    val: topP.toFixed(2),        min: 0,   max: 1,     step: 0.01, set: setTopP,            cur: topP },
+          { label: 'Top K',    val: topK ?? 40,             min: 1,   max: 200,   step: 1,    set: setTopK,            cur: topK ?? 40 },
+          { label: 'Freq Pen', val: frequencyPenalty.toFixed(2), min: 0, max: 2,  step: 0.01, set: setFrequencyPenalty, cur: frequencyPenalty },
+          { label: 'Pres Pen', val: presencePenalty.toFixed(2),  min: 0, max: 2,  step: 0.01, set: setPresencePenalty,  cur: presencePenalty },
+          { label: 'Max Tok',  val: maxTokens,              min: 256, max: 16384, step: 256,  set: setMaxTokens,       cur: maxTokens },
+        ].map(p => (
+          <div key={p.label} className="sampling-param">
+            <div className="param-label">
+              <span>{p.label}</span>
+              <span className="pv">{p.val}</span>
+            </div>
+            <input type="range" className="param-slider" min={p.min} max={p.max} step={p.step}
+              value={p.cur} onChange={e => p.set(Number(e.target.value) as any)} />
           </div>
-          <input type="range" className="param-slider" min={0} max={2} step={0.01}
-            value={temperature} onChange={e => setTemperature(Number(e.target.value))} />
-        </div>
-        <div className="sampling-param">
-          <div className="param-label">
-            <span>Top P</span>
-            <span className="pv">{topP.toFixed(2)}</span>
-          </div>
-          <input type="range" className="param-slider" min={0} max={1} step={0.01}
-            value={topP} onChange={e => setTopP(Number(e.target.value))} />
-        </div>
-        <div className="sampling-param">
-          <div className="param-label">
-            <span>Top K</span>
-            <span className="pv">{topK ?? 40}</span>
-          </div>
-          <input type="range" className="param-slider" min={1} max={200} step={1}
-            value={topK ?? 40} onChange={e => setTopK(Number(e.target.value))} />
-        </div>
-        <div className="sampling-param">
-          <div className="param-label">
-            <span>Freq Pen</span>
-            <span className="pv">{frequencyPenalty.toFixed(2)}</span>
-          </div>
-          <input type="range" className="param-slider" min={0} max={2} step={0.01}
-            value={frequencyPenalty} onChange={e => setFrequencyPenalty(Number(e.target.value))} />
-        </div>
-        <div className="sampling-param">
-          <div className="param-label">
-            <span>Pres Pen</span>
-            <span className="pv">{presencePenalty.toFixed(2)}</span>
-          </div>
-          <input type="range" className="param-slider" min={0} max={2} step={0.01}
-            value={presencePenalty} onChange={e => setPresencePenalty(Number(e.target.value))} />
-        </div>
-        <div className="sampling-param" style={{ marginBottom: 0 }}>
-          <div className="param-label">
-            <span>Max Tokens</span>
-            <span className="pv">{maxTokens}</span>
-          </div>
-          <input type="range" className="param-slider" min={256} max={16384} step={256}
-            value={maxTokens} onChange={e => setMaxTokens(Number(e.target.value))} />
-        </div>
+        ))}
       </div>
 
       {/* Code language */}
@@ -211,9 +175,7 @@ export default function RightRail() {
           <div className="tele-block-label">Language</div>
           <div className="chip-row">
             {LANGUAGES.map(l => (
-              <button key={l} className={`chip ${codeLanguage === l ? 'on' : ''}`} onClick={() => setCodeLanguage(l)}>
-                {l}
-              </button>
+              <button key={l} className={`chip ${codeLanguage === l ? 'on' : ''}`} onClick={() => setCodeLanguage(l)}>{l}</button>
             ))}
           </div>
         </div>
@@ -225,11 +187,7 @@ export default function RightRail() {
           <div className="tele-block">
             <div className="tele-block-label">Model</div>
             {IMAGE_MODELS.map(m => (
-              <div
-                key={m.id}
-                className={`model-entry ${selectedImageModel === m.id ? 'selected' : ''}`}
-                onClick={() => setSelectedImageModel(m.id)}
-              >
+              <div key={m.id} className={`model-entry ${selectedImageModel === m.id ? 'selected' : ''}`} onClick={() => setSelectedImageModel(m.id)}>
                 <span className="mn">{m.label}</span>
                 <span className="mb">{m.badge}</span>
               </div>
@@ -239,33 +197,26 @@ export default function RightRail() {
             <div className="tele-block-label">Size</div>
             <div className="chip-row">
               {SIZES.map(s => (
-                <button key={s.label} className={`chip ${imageWidth === s.w && imageHeight === s.h ? 'on' : ''}`}
-                  onClick={() => setImageSize(s.w, s.h)}>{s.label}</button>
+                <button key={s.label} className={`chip ${imageWidth === s.w && imageHeight === s.h ? 'on' : ''}`} onClick={() => setImageSize(s.w, s.h)}>{s.label}</button>
               ))}
             </div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--ink-faint)', marginTop: '6px', letterSpacing: '.1em' }}>
-              {imageWidth} × {imageHeight} px
-            </div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--ink-faint)', marginTop: '6px' }}>{imageWidth} × {imageHeight} px</div>
           </div>
           <div className="tele-block">
             <div className="tele-block-label">Quality</div>
             <div className="chip-row">
               {QUALITY.map(q => (
-                <button key={q.label} className={`chip ${imageSteps === q.steps ? 'on' : ''}`}
-                  onClick={() => setImageSteps(q.steps)}>{q.label}</button>
+                <button key={q.label} className={`chip ${imageSteps === q.steps ? 'on' : ''}`} onClick={() => setImageSteps(q.steps)}>{q.label}</button>
               ))}
             </div>
           </div>
         </>
       )}
 
-      {/* Auto-route toggle */}
       <div className="tele-block" style={{ marginTop: 'auto' }}>
         <div className="toggle-row" style={{ borderTop: 0 }}>
           <span className="lbl">Auto-Route</span>
-          <button className={`tswitch ${autoRoute ? 'on' : ''}`} onClick={() => setAutoRoute(!autoRoute)}>
-            <i />
-          </button>
+          <button className={`tswitch ${autoRoute ? 'on' : ''}`} onClick={() => setAutoRoute(!autoRoute)}><i /></button>
         </div>
       </div>
     </aside>

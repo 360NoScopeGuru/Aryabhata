@@ -5,6 +5,9 @@ interface StreamOptions {
   onFirstToken?: (ttftMs: number) => void
   onDone?: (id?: string, outputTokens?: number) => void
   onError?: (err: string) => void
+  // Blend-mode callbacks
+  onModelStart?: (modelId: string) => void
+  onModelDone?: (modelId: string, fullText: string) => void
 }
 
 export function useStream() {
@@ -47,7 +50,11 @@ export function useStream() {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6))
-              if (data.delta) {
+              if (data.model_start) {
+                opts.onModelStart?.(data.model_start)
+              } else if (data.model_done !== undefined) {
+                opts.onModelDone?.(data.model_done, data.text ?? '')
+              } else if (data.delta) {
                 if (!firstToken) {
                   firstToken = true
                   opts.onFirstToken?.(Date.now() - startTime)

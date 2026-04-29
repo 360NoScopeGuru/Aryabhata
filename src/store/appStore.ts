@@ -3,7 +3,6 @@ import { persist } from 'zustand/middleware'
 
 export type Mode = 'chat' | 'code' | 'image'
 export type Theme = 'cad' | 'orbit' | 'brutal' | 'liquid' | 'prism'
-export type RoutingMode = 'blend' | 'cascade' | 'moe' | 'boss'
 export type SamplingPreset = 'precise' | 'balanced' | 'creative' | 'forensic'
 
 export interface MixingModel {
@@ -14,9 +13,9 @@ export interface MixingModel {
   context: string
   speed: string
   color: string
-  modes: Mode[]
 }
 
+// All text models support both chat and code
 export const MIXING_MODELS: MixingModel[] = [
   {
     id: 'meta/llama-3.1-70b-instruct',
@@ -26,7 +25,6 @@ export const MIXING_MODELS: MixingModel[] = [
     context: '128K',
     speed: '145T/S',
     color: '#a78bfa',
-    modes: ['chat'],
   },
   {
     id: 'meta/llama-3.1-405b-instruct',
@@ -36,7 +34,6 @@ export const MIXING_MODELS: MixingModel[] = [
     context: '128K',
     speed: '89T/S',
     color: '#818cf8',
-    modes: ['code'],
   },
   {
     id: 'mistralai/mistral-large-3-675b-instruct-2512',
@@ -46,7 +43,6 @@ export const MIXING_MODELS: MixingModel[] = [
     context: '128K',
     speed: '95T/S',
     color: '#fb923c',
-    modes: ['chat', 'code'],
   },
   {
     id: 'meta/llama-3.1-8b-instruct',
@@ -56,21 +52,12 @@ export const MIXING_MODELS: MixingModel[] = [
     context: '128K',
     speed: '320T/S',
     color: '#34d399',
-    modes: ['chat'],
   },
 ]
 
 export const IMAGE_MODELS = [
   { id: 'black-forest-labs/flux.1-dev', label: 'FLUX 1 Dev', badge: 'HD' },
 ]
-
-// Keep these for compatibility with CodeMode / ImageMode selectors
-export const CHAT_MODELS = MIXING_MODELS.filter(m => m.modes.includes('chat')).map(m => ({
-  id: m.id, label: m.label, badge: m.provider,
-}))
-export const CODE_MODELS = MIXING_MODELS.filter(m => m.modes.includes('code')).map(m => ({
-  id: m.id, label: m.label, badge: m.provider,
-}))
 
 export const SAMPLING_PRESETS: Record<SamplingPreset, { temperature: number; topP: number; topK: number }> = {
   precise:  { temperature: 0.1,  topP: 0.90, topK: 10  },
@@ -97,7 +84,7 @@ export interface Message {
   model?: string
   image_url?: string
   created_at: string
-  // telemetry (assistant messages only)
+  blend?: boolean
   ttft?: number
   tpot?: number
   latency?: number
@@ -125,9 +112,8 @@ interface AppState {
   conversations: Conversation[]
   messages: Record<string, Message[]>
 
-  // Mixing console
-  modelWeights: Record<string, number>
-  routingMode: RoutingMode
+  // Model selection (1 = normal, 2-5 = blend mode)
+  selectedModels: string[]
 
   // Image
   selectedImageModel: string
@@ -167,8 +153,8 @@ interface AppState {
   appendToLastMessage: (convId: string, delta: string) => void
   updateLastMessageTelemetry: (convId: string, fields: Partial<Message>) => void
 
-  setModelWeight: (modelId: string, weight: number) => void
-  setRoutingMode: (m: RoutingMode) => void
+  toggleModel: (id: string) => void
+  setSelectedModels: (ids: string[]) => void
 
   setSelectedImageModel: (m: string) => void
   setImageSize: (w: number, h: number) => void
@@ -189,20 +175,12 @@ interface AppState {
   bumpThreadCount: () => void
 }
 
-const DEFAULT_WEIGHTS: Record<string, number> = {
-  'meta/llama-3.1-70b-instruct': 100,
-  'meta/llama-3.1-405b-instruct': 100,
-  'mistralai/mistral-large-3-675b-instruct-2512': 0,
-  'meta/llama-3.1-8b-instruct': 0,
-  'black-forest-labs/flux.1-dev': 100,
+export function getActiveModel(selectedModels: string[]): string {
+  return selectedModels[0] ?? MIXING_MODELS[0].id
 }
 
-export function getActiveModel(weights: Record<string, number>, mode: Mode): string {
-  const modeModels = MIXING_MODELS.filter(m => m.modes.includes(mode))
-  if (modeModels.length === 0) return MIXING_MODELS[0].id
-  return modeModels.reduce((best, m) =>
-    (weights[m.id] ?? 0) > (weights[best.id] ?? 0) ? m : best
-  ).id
+export function isBlendMode(selectedModels: string[]): boolean {
+  return selectedModels.length >= 2
 }
 
 export const useAppStore = create<AppState>()(
@@ -215,8 +193,7 @@ export const useAppStore = create<AppState>()(
       conversations: [],
       messages: {},
 
-      modelWeights: DEFAULT_WEIGHTS,
-      routingMode: 'blend',
+      selectedModels: ['meta/llama-3.1-70b-instruct'],
 
       selectedImageModel: 'black-forest-labs/flux.1-dev',
       imageWidth: 1024,
@@ -274,10 +251,17 @@ export const useAppStore = create<AppState>()(
         return { messages: { ...s.messages, [convId]: msgs } }
       }),
 
-      setModelWeight: (modelId, weight) => set((s) => ({
-        modelWeights: { ...s.modelWeights, [modelId]: weight },
-      })),
-      setRoutingMode: (m) => set({ routingMode: m }),
+      toggleModel: (id) => set((s) => {
+        const already = s.selectedModels.includes(id)
+        if (already) {
+          // Always keep at least 1
+          if (s.selectedModels.length === 1) return s
+          return { selectedModels: s.selectedModels.filter(m => m !== id) }
+        }
+        if (s.selectedModels.length >= 5) return s
+        return { selectedModels: [...s.selectedModels, id] }
+      }),
+      setSelectedModels: (ids) => set({ selectedModels: ids.slice(0, 5) }),
 
       setSelectedImageModel: (m) => set({ selectedImageModel: m }),
       setImageSize: (w, h) => set({ imageWidth: w, imageHeight: h }),
@@ -305,12 +289,11 @@ export const useAppStore = create<AppState>()(
       bumpThreadCount: () => set((s) => ({ threadCount: s.threadCount + 1 })),
     }),
     {
-      name: 'aryabhata-v2',
+      name: 'aryabhata-v3',
       partialize: (s) => ({
         theme: s.theme,
         autoRoute: s.autoRoute,
-        modelWeights: s.modelWeights,
-        routingMode: s.routingMode,
+        selectedModels: s.selectedModels,
         selectedImageModel: s.selectedImageModel,
         imageWidth: s.imageWidth,
         imageHeight: s.imageHeight,

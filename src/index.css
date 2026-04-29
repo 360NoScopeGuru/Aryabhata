@@ -1495,3 +1495,163 @@ pre.code-block {
 :root[data-theme="liquid"] .msg-body {
   box-shadow: 1px 2px 8px rgba(44,24,16,.06);
 }
+
+/* ════════════════════════════════════════════════
+   TOPBAR REDESIGN — centred brand
+   ════════════════════════════════════════════════ */
+.topbar-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding-left: 4px;
+}
+.topbar-center {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 22px;
+  border-left: var(--border-w) solid var(--line-soft);
+  border-right: var(--border-w) solid var(--line-soft);
+  flex-shrink: 0;
+}
+
+/* ════════════════════════════════════════════════
+   MODEL CARDS (sidebar, replaces engine sliders)
+   ════════════════════════════════════════════════ */
+.model-list {
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.model-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: var(--border-w) solid var(--line-soft);
+  cursor: pointer;
+  transition: background var(--trans);
+}
+.model-card:hover { background: var(--surface); }
+.model-card.selected { background: var(--glow2); }
+.model-card-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: border-color var(--trans);
+}
+.model-card-info { flex: 1; min-width: 0; }
+.model-card-name {
+  font-size: 11.5px;
+  color: var(--ink);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.model-card-meta {
+  font-family: var(--mono);
+  font-size: 7.5px;
+  color: var(--ink-faint);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.model-card-check {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: var(--border-w) solid var(--line);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: border-color var(--trans);
+}
+
+/* ════════════════════════════════════════════════
+   THINKING INDICATOR — no textbox, just a pulse
+   ════════════════════════════════════════════════ */
+.think-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+}
+.think-dot-model {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: pulse 2s ease-in-out infinite;
+}
+.think-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ════════════════════════════════════════════════
+   THEMES DROP-UP (status bar)
+   ════════════════════════════════════════════════ */
+.themes-trigger-cell {
+  padding: 0 !important;
+}
+.themes-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 100%;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: transparent;
+  border: 0;
+  border-right: var(--border-w) solid var(--line-soft);
+  cursor: pointer;
+  transition: color var(--trans), background var(--trans);
+  white-space: nowrap;
+}
+.themes-trigger-btn:hover { color: var(--ink-dim); background: var(--surface); }
+
+.themes-dropup {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  background: var(--surface);
+  border: var(--border-w) solid var(--line);
+  border-radius: var(--r);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 200;
+  min-width: 130px;
+  box-shadow: 0 -8px 24px rgba(0,0,0,.25);
+}
+.themes-dropup-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: transparent;
+  border: 0;
+  border-radius: calc(var(--r) - 1px);
+  cursor: pointer;
+  transition: background var(--trans), color var(--trans);
+  text-align: left;
+}
+.themes-dropup-item:hover { background: var(--glow2); color: var(--ink-dim); }
+.themes-dropup-item.active { color: var(--accent); }

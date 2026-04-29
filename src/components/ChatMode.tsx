@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useAppStore, type Message, getActiveModel, MIXING_MODELS } from '@/store/appStore'
+import { useAppStore, type Message, getActiveModel, isBlendMode, MIXING_MODELS } from '@/store/appStore'
 import { useStream } from '@/hooks/useStream'
 import MessageBubble from './MessageBubble'
 import ChatInput from './ChatInput'
@@ -10,17 +10,19 @@ interface Props { conversationId: string }
 export default function ChatMode({ conversationId }: Props) {
   const {
     messages, addMessage, appendToLastMessage, setMessages,
-    modelWeights, autoRoute, setMode, updateConversationTitle,
+    selectedModels, autoRoute, setMode, updateConversationTitle,
     addSessionTokens, updateLastMessageTelemetry, updateTelemetry, bumpThreadCount,
     temperature, topP, topK, frequencyPenalty, presencePenalty, maxTokens,
     telemetry,
   } = useAppStore()
   const { stream, stop, streaming } = useStream()
   const bottomRef = useRef<HTMLDivElement>(null)
-  const [isThinking, setIsThinking] = useState(false)
+  const [thinkingModel, setThinkingModel] = useState<string | null>(null)
   const namedRef = useRef(false)
   const convMessages = messages[conversationId] ?? []
-  const activeModelId = getActiveModel(modelWeights, 'chat')
+
+  const blend = isBlendMode(selectedModels)
+  const activeModelId = getActiveModel(selectedModels)
   const activeModel = MIXING_MODELS.find(m => m.id === activeModelId)
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export default function ChatMode({ conversationId }: Props) {
   }
 
   const handleSend = async (text: string, imageBase64?: string) => {
-    if (autoRoute) {
+    if (autoRoute && !blend) {
       try {
         const res = await fetch('/api/route', {
           method: 'POST',
@@ -70,74 +72,120 @@ export default function ChatMode({ conversationId }: Props) {
 
     const userMsg: Message = {
       id: uuid(), conversation_id: conversationId, role: 'user',
-      content, mode: 'chat', model: activeModelId,
+      content, mode: 'chat', model: blend ? 'blend' : activeModelId,
       created_at: new Date().toISOString(),
     }
     addMessage(userMsg)
 
-    const asstMsg: Message = {
-      id: uuid(), conversation_id: conversationId, role: 'assistant',
-      content: '', mode: 'chat', model: activeModelId,
-      created_at: new Date().toISOString(),
-    }
-    addMessage(asstMsg)
-    setIsThinking(true)
-    updateTelemetry({ streaming: true, tpot: 0, ttft: 0 })
-
     const isFirst = convMessages.length === 0
     const allMsgs = [...convMessages, userMsg].map(m => ({ role: m.role, content: m.content }))
 
+    updateTelemetry({ streaming: true, tpot: 0, ttft: 0 })
     const startTime = Date.now()
     let ttftMs = 0
     const prevSpark = telemetry.spark
 
-    await stream(
-      '/api/chat/stream',
-      {
-        conversation_id: conversationId,
-        messages: allMsgs,
-        model: activeModelId,
-        temperature, top_p: topP, top_k: topK,
-        frequency_penalty: frequencyPenalty,
-        presence_penalty: presencePenalty,
-        max_tokens: maxTokens,
-      },
-      {
-        onFirstToken: (ms) => {
-          ttftMs = ms
-          setIsThinking(false)
-          updateTelemetry({ ttft: ms, streaming: true })
+    if (blend) {
+      // ── BLEND MODE ─────────────────────────────────────────
+      // Each model gets its own assistant message, added when it starts
+      await stream(
+        '/api/blend/stream',
+        {
+          conversation_id: conversationId,
+          messages: allMsgs,
+          models: selectedModels,
+          temperature, top_p: topP, top_k: topK,
+          max_tokens: maxTokens,
         },
-        onDelta: (delta) => {
-          setIsThinking(false)
-          appendToLastMessage(conversationId, delta)
-          addSessionTokens(Math.ceil(delta.length / 4))
-        },
-        onDone: (_id, outputTokens) => {
-          const latencyMs = Date.now() - startTime
-          const tokenCount = outputTokens ?? 0
-          const genMs = Math.max(1, latencyMs - ttftMs)
-          const tps = tokenCount > 0 ? (tokenCount / genMs) * 1000 : 0
-          const newSpark = [...prevSpark.slice(1), Math.min(100, tps)]
+        {
+          onModelStart: (modelId) => {
+            setThinkingModel(modelId)
+            addMessage({
+              id: uuid(), conversation_id: conversationId, role: 'assistant',
+              content: '', mode: 'chat', model: modelId, blend: true,
+              created_at: new Date().toISOString(),
+            })
+          },
+          onFirstToken: (ms) => {
+            ttftMs = ms
+            setThinkingModel(null)
+            updateTelemetry({ ttft: ms })
+          },
+          onDelta: (delta) => {
+            setThinkingModel(null)
+            appendToLastMessage(conversationId, delta)
+            addSessionTokens(Math.ceil(delta.length / 4))
+          },
+          onModelDone: () => {
+            setThinkingModel(null)
+            updateLastMessageTelemetry(conversationId, { finishReason: 'stop' })
+          },
+          onDone: (_id, outputTokens) => {
+            const latencyMs = Date.now() - startTime
+            const tokenCount = outputTokens ?? 0
+            const genMs = Math.max(1, latencyMs - ttftMs)
+            const tps = tokenCount > 0 ? (tokenCount / genMs) * 1000 : 0
+            updateTelemetry({ streaming: false, tpot: tps, outputTokens: tokenCount, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
+            setThinkingModel(null)
+            if (isFirst) tryAutoName(text)
+          },
+          onError: () => {
+            setThinkingModel(null)
+            updateTelemetry({ streaming: false })
+          },
+        }
+      )
+    } else {
+      // ── NORMAL MODE ─────────────────────────────────────────
+      addMessage({
+        id: uuid(), conversation_id: conversationId, role: 'assistant',
+        content: '', mode: 'chat', model: activeModelId,
+        created_at: new Date().toISOString(),
+      })
+      setThinkingModel(activeModelId)
 
-          updateTelemetry({
-            streaming: false, ttft: ttftMs, tpot: tps,
-            outputTokens: tokenCount, spark: newSpark,
-          })
-          updateLastMessageTelemetry(conversationId, {
-            ttft: ttftMs, tpot: tps, latency: latencyMs,
-            outputTokens: tokenCount, finishReason: 'stop',
-          })
-          setIsThinking(false)
-          if (isFirst) tryAutoName(text)
+      await stream(
+        '/api/chat/stream',
+        {
+          conversation_id: conversationId,
+          messages: allMsgs,
+          model: activeModelId,
+          temperature, top_p: topP, top_k: topK,
+          frequency_penalty: frequencyPenalty,
+          presence_penalty: presencePenalty,
+          max_tokens: maxTokens,
         },
-        onError: () => {
-          setIsThinking(false)
-          updateTelemetry({ streaming: false })
-        },
-      }
-    )
+        {
+          onFirstToken: (ms) => {
+            ttftMs = ms
+            setThinkingModel(null)
+            updateTelemetry({ ttft: ms, streaming: true })
+          },
+          onDelta: (delta) => {
+            setThinkingModel(null)
+            appendToLastMessage(conversationId, delta)
+            addSessionTokens(Math.ceil(delta.length / 4))
+          },
+          onDone: (_id, outputTokens) => {
+            const latencyMs = Date.now() - startTime
+            const tokenCount = outputTokens ?? 0
+            const genMs = Math.max(1, latencyMs - ttftMs)
+            const tps = tokenCount > 0 ? (tokenCount / genMs) * 1000 : 0
+            updateTelemetry({ streaming: false, ttft: ttftMs, tpot: tps, outputTokens: tokenCount, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
+            updateLastMessageTelemetry(conversationId, { ttft: ttftMs, tpot: tps, latency: latencyMs, outputTokens: tokenCount, finishReason: 'stop' })
+            setThinkingModel(null)
+            if (isFirst) tryAutoName(text)
+          },
+          onError: () => {
+            setThinkingModel(null)
+            updateTelemetry({ streaming: false })
+          },
+        }
+      )
+    }
   }
+
+  const thinkingModelInfo = thinkingModel ? MIXING_MODELS.find(m => m.id === thinkingModel) : null
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -166,7 +214,7 @@ export default function ChatMode({ conversationId }: Props) {
                 Aryabhata
               </div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: '9.5px', letterSpacing: '.2em', color: 'var(--ink-dim)', textTransform: 'uppercase', textAlign: 'center' }}>
-                Chat · {activeModel?.label ?? activeModelId}
+                {blend ? `Blend · ${selectedModels.length} Models` : `Chat · ${activeModel?.label ?? activeModelId}`}
               </div>
             </div>
           </div>
@@ -176,23 +224,24 @@ export default function ChatMode({ conversationId }: Props) {
           <MessageBubble
             key={msg.id}
             message={msg}
-            isStreaming={streaming && i === convMessages.length - 1 && msg.role === 'assistant'}
+            isStreaming={streaming && i === convMessages.length - 1 && msg.role === 'assistant' && !thinkingModel}
           />
         ))}
 
-        {isThinking && (
-          <div className="msg fade-up">
-            <div className="msg-who"><span className="who-label">ASST</span></div>
-            <div className="msg-body" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '16px' }}>
-              <div className="think-dots">
-                <div className="think-dot" />
-                <div className="think-dot" />
-                <div className="think-dot" />
-              </div>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: '9.5px', letterSpacing: '.14em', color: 'var(--ink-faint)', textTransform: 'uppercase' }}>
-                Processing
-              </span>
+        {/* Thinking indicator — not a textbox, just a floating pulse */}
+        {thinkingModel && (
+          <div className="think-indicator">
+            {thinkingModelInfo && (
+              <span className="think-dot-model" style={{ background: thinkingModelInfo.color }} />
+            )}
+            <div className="think-dots">
+              <div className="think-dot" />
+              <div className="think-dot" />
+              <div className="think-dot" />
             </div>
+            <span className="think-label">
+              {thinkingModelInfo?.label ?? 'Model'} thinking…
+            </span>
           </div>
         )}
 
@@ -203,7 +252,7 @@ export default function ChatMode({ conversationId }: Props) {
         onSend={handleSend}
         onStop={stop}
         streaming={streaming}
-        placeholder="Transmit a message…"
+        placeholder={blend ? `Transmit to ${selectedModels.length} models…` : 'Transmit a message…'}
       />
     </div>
   )

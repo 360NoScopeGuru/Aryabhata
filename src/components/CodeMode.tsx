@@ -11,7 +11,7 @@ interface Props { conversationId: string }
 export default function CodeMode({ conversationId }: Props) {
   const {
     messages, addMessage, appendToLastMessage, setMessages,
-    modelWeights, codeLanguage, updateConversationTitle, addSessionTokens,
+    selectedModels, codeLanguage, updateConversationTitle, addSessionTokens,
     updateLastMessageTelemetry, updateTelemetry, bumpThreadCount,
     temperature, topP, topK, frequencyPenalty, presencePenalty, maxTokens,
     telemetry,
@@ -19,10 +19,10 @@ export default function CodeMode({ conversationId }: Props) {
   const { stream, stop, streaming } = useStream()
   const bottomRef = useRef<HTMLDivElement>(null)
   const [editorCode, setEditorCode] = useState('# Write your code here\n')
-  const [isThinking, setIsThinking] = useState(false)
+  const [thinkingModel, setThinkingModel] = useState<string | null>(null)
   const namedRef = useRef(false)
   const convMessages = messages[conversationId] ?? []
-  const activeModelId = getActiveModel(modelWeights, 'code')
+  const activeModelId = getActiveModel(selectedModels)
   const activeModel = MIXING_MODELS.find(m => m.id === activeModelId)
 
   useEffect(() => {
@@ -63,19 +63,16 @@ export default function CodeMode({ conversationId }: Props) {
       created_at: new Date().toISOString(),
     }
     addMessage(userMsg)
-
-    const asstMsg: Message = {
+    addMessage({
       id: uuid(), conversation_id: conversationId, role: 'assistant',
       content: '', mode: 'code', model: activeModelId,
       created_at: new Date().toISOString(),
-    }
-    addMessage(asstMsg)
-    setIsThinking(true)
+    })
+    setThinkingModel(activeModelId)
     updateTelemetry({ streaming: true, tpot: 0, ttft: 0 })
 
     const isFirst = convMessages.length === 0
     const allMsgs = [...convMessages, userMsg].map(m => ({ role: m.role, content: m.content }))
-
     const startTime = Date.now()
     let ttftMs = 0
     const prevSpark = telemetry.spark
@@ -95,11 +92,11 @@ export default function CodeMode({ conversationId }: Props) {
       {
         onFirstToken: (ms) => {
           ttftMs = ms
-          setIsThinking(false)
+          setThinkingModel(null)
           updateTelemetry({ ttft: ms, streaming: true })
         },
         onDelta: (delta) => {
-          setIsThinking(false)
+          setThinkingModel(null)
           appendToLastMessage(conversationId, delta)
           addSessionTokens(Math.ceil(delta.length / 4))
         },
@@ -108,21 +105,13 @@ export default function CodeMode({ conversationId }: Props) {
           const tokenCount = outputTokens ?? 0
           const genMs = Math.max(1, latencyMs - ttftMs)
           const tps = tokenCount > 0 ? (tokenCount / genMs) * 1000 : 0
-          const newSpark = [...prevSpark.slice(1), Math.min(100, tps)]
-
-          updateTelemetry({
-            streaming: false, ttft: ttftMs, tpot: tps,
-            outputTokens: tokenCount, spark: newSpark,
-          })
-          updateLastMessageTelemetry(conversationId, {
-            ttft: ttftMs, tpot: tps, latency: latencyMs,
-            outputTokens: tokenCount, finishReason: 'stop',
-          })
-          setIsThinking(false)
+          updateTelemetry({ streaming: false, ttft: ttftMs, tpot: tps, outputTokens: tokenCount, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
+          updateLastMessageTelemetry(conversationId, { ttft: ttftMs, tpot: tps, latency: latencyMs, outputTokens: tokenCount, finishReason: 'stop' })
+          setThinkingModel(null)
           if (isFirst) tryAutoName(text)
         },
         onError: () => {
-          setIsThinking(false)
+          setThinkingModel(null)
           updateTelemetry({ streaming: false })
         },
       }
@@ -131,7 +120,6 @@ export default function CodeMode({ conversationId }: Props) {
 
   return (
     <div style={{ display: 'flex', height: '100%' }}>
-      {/* Monaco editor panel */}
       <div style={{ width: '50%', display: 'flex', flexDirection: 'column', borderRight: '.5px solid var(--line-soft)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderBottom: '.5px solid var(--line-soft)', flexShrink: 0 }}>
           <span style={{ fontFamily: 'var(--mono)', fontSize: '9.5px', letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--ink-dim)' }}>
@@ -167,23 +155,18 @@ export default function CodeMode({ conversationId }: Props) {
         </div>
       </div>
 
-      {/* Assistant chat panel */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <div className="center-head">
           <span>Assistant</span>
           <span style={{ color: 'var(--ink-faint)', fontSize: '9px' }}>{activeModel?.label ?? activeModelId}</span>
         </div>
 
-        <div className="thread" style={{ gap: '16px' }}>
+        <div className="thread">
           {convMessages.length === 0 && (
             <div className="empty-state">
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: '11px', letterSpacing: '.14em', color: 'var(--ink)', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  Code Assistant
-                </div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.2em', color: 'var(--ink-dim)', textTransform: 'uppercase' }}>
-                  {activeModel?.label ?? activeModelId}
-                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: '11px', letterSpacing: '.14em', color: 'var(--ink)', textTransform: 'uppercase', marginBottom: '6px' }}>Code Assistant</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.2em', color: 'var(--ink-dim)', textTransform: 'uppercase' }}>{activeModel?.label ?? activeModelId}</div>
               </div>
             </div>
           )}
@@ -192,20 +175,19 @@ export default function CodeMode({ conversationId }: Props) {
             <MessageBubble
               key={msg.id}
               message={msg}
-              isStreaming={streaming && i === convMessages.length - 1 && msg.role === 'assistant'}
+              isStreaming={streaming && i === convMessages.length - 1 && msg.role === 'assistant' && !thinkingModel}
             />
           ))}
 
-          {isThinking && (
-            <div className="msg fade-up">
-              <div className="msg-who"><span className="who-label">ASST</span></div>
-              <div className="msg-body" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px' }}>
-                <div className="think-dots">
-                  <div className="think-dot" /><div className="think-dot" /><div className="think-dot" />
-                </div>
+          {thinkingModel && (
+            <div className="think-indicator">
+              <div className="think-dots">
+                <div className="think-dot" /><div className="think-dot" /><div className="think-dot" />
               </div>
+              <span className="think-label">{activeModel?.label ?? 'Model'} thinking…</span>
             </div>
           )}
+
           <div ref={bottomRef} />
         </div>
 

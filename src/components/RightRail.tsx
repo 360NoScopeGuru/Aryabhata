@@ -43,7 +43,7 @@ export default function RightRail() {
     imageWidth, imageHeight, imageSteps,
     setImageSize, setImageSteps,
     sessionTokens,
-    conversations, activeConversationId,
+    conversations,
     theme, setTheme,
     font, setFont,
   } = useAppStore()
@@ -53,7 +53,6 @@ export default function RightRail() {
   const selectedModel = mode === 'chat' ? selectedChatModel : mode === 'code' ? selectedCodeModel : selectedImageModel
   const setModel = mode === 'chat' ? setSelectedChatModel : mode === 'code' ? setSelectedCodeModel : setSelectedImageModel
 
-  const activeConv = conversations.find((c) => c.id === activeConversationId)
   const currentSize = SIZES.find((s) => s.w === imageWidth && s.h === imageHeight) ?? SIZES[0]
   const currentQuality = QUALITY.find((q) => q.steps === imageSteps) ?? QUALITY[1]
 

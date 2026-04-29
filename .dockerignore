@@ -1,0 +1,8 @@
+node_modules
+dist
+.git
+backend/.env
+.env
+*.pyc
+__pycache__
+backend/studio.db

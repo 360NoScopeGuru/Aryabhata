@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: aryabhata
+    runtime: docker
+    envVars:
+      - key: NVIDIA_API_KEY_CHAT
+        sync: false
+      - key: NVIDIA_API_KEY_CODE
+        sync: false
+      - key: NVIDIA_API_KEY_IMAGE
+        sync: false
+      - key: NVIDIA_API_KEY_ROUTER
+        sync: false
+      - key: NVIDIA_API_KEY_MISTRAL
+        sync: false

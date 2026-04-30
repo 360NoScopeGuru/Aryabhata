@@ -16,11 +16,12 @@ def now():
     return datetime.now(timezone.utc).isoformat()
 
 def get_api_key(model: str) -> str:
-    if "mistral" in model.lower():
-        return os.getenv("NVIDIA_API_KEY_MISTRAL") or os.getenv("NVIDIA_API_KEY_CHAT")
-    if "405b" in model or "llama-3.1-70b" in model:
-        return os.getenv("NVIDIA_API_KEY_CODE") or os.getenv("NVIDIA_API_KEY_CHAT")
-    return os.getenv("NVIDIA_API_KEY_CHAT")
+    m = model.lower()
+    if "mistral" in m or "mixtral" in m or "codestral" in m:
+        return os.getenv("NVIDIA_API_KEY_MISTRAL") or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CHAT")
+    if "405b" in m:
+        return os.getenv("NVIDIA_API_KEY_CODE") or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CHAT")
+    return os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CHAT") or os.getenv("NVIDIA_API_KEY_CODE")
 
 async def detect_mode(prompt: str) -> str:
     api_key = os.getenv("NVIDIA_API_KEY_ROUTER")

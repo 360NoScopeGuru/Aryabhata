@@ -11,21 +11,65 @@ router = APIRouter(tags=["blend"])
 NVIDIA_BASE = "https://integrate.api.nvidia.com/v1"
 
 MODEL_LABELS = {
-    'meta/llama-3.1-70b-instruct':                  'Llama 3.1 70B',
-    'meta/llama-3.1-405b-instruct':                 'Llama 3.1 405B',
-    'mistralai/mistral-large-3-675b-instruct-2512': 'Mistral 675B',
-    'meta/llama-3.1-8b-instruct':                   'Llama 3.1 8B',
+    # Meta
+    'meta/llama-3.2-3b-instruct':                       'Llama 3.2 3B',
+    'meta/llama-3.1-8b-instruct':                        'Llama 3.1 8B',
+    'meta/llama-3.2-11b-vision-instruct':                'Llama 3.2 11B Vision',
+    'meta/llama-3.1-70b-instruct':                       'Llama 3.1 70B',
+    'meta/llama-3.3-70b-instruct':                       'Llama 3.3 70B',
+    'meta/llama-3.2-90b-vision-instruct':                'Llama 3.2 90B Vision',
+    'meta/llama-3.1-405b-instruct':                      'Llama 3.1 405B',
+    'meta/llama-4-scout-17b-16e-instruct':               'Llama 4 Scout',
+    'meta/llama-4-maverick-17b-128e-instruct':           'Llama 4 Maverick',
+    # Mistral
+    'mistralai/mistral-7b-instruct-v0.3':                'Mistral 7B',
+    'mistralai/mistral-nemo-12b-instruct':                'Mistral Nemo 12B',
+    'mistralai/mixtral-8x7b-instruct-v0.1':              'Mixtral 8×7B',
+    'mistralai/codestral-22b-instruct-v0.1':             'Codestral 22B',
+    'mistralai/mixtral-8x22b-instruct-v0.1':             'Mixtral 8×22B',
+    'mistralai/mistral-large-3-675b-instruct-2512':      'Mistral 675B',
+    # Google
+    'google/gemma-2-9b-it':                              'Gemma 2 9B',
+    'google/codegemma-7b-it':                            'CodeGemma 7B',
+    'google/gemma-2-27b-it':                             'Gemma 2 27B',
+    'google/gemma-3-12b-it':                             'Gemma 3 12B',
+    'google/gemma-3-27b-it':                             'Gemma 3 27B',
+    # Microsoft
+    'microsoft/phi-3-mini-128k-instruct':                'Phi-3 Mini',
+    'microsoft/phi-3.5-mini-instruct':                   'Phi-3.5 Mini',
+    'microsoft/phi-3-medium-128k-instruct':              'Phi-3 Medium',
+    'microsoft/phi-4':                                   'Phi-4',
+    # Qwen
+    'qwen/qwen2.5-7b-instruct':                          'Qwen 2.5 7B',
+    'qwen/qwen2.5-72b-instruct':                         'Qwen 2.5 72B',
+    'qwen/qwq-32b':                                      'QwQ 32B',
+    # DeepSeek
+    'deepseek-ai/deepseek-r1-distill-qwen-7b':           'DeepSeek R1 7B',
+    'deepseek-ai/deepseek-r1-distill-llama-70b':         'DeepSeek R1 70B',
+    'deepseek-ai/deepseek-r1':                           'DeepSeek R1',
+    'deepseek-ai/deepseek-v3':                           'DeepSeek V3',
+    # NVIDIA
+    'nvidia/llama-3.1-nemotron-nano-8b-v1':              'Nemotron Nano 8B',
+    'nvidia/llama-3.1-nemotron-70b-instruct':            'Nemotron 70B',
+    'nvidia/llama-3.3-nemotron-super-49b-v1':            'Nemotron Super 49B',
+    # Cohere
+    'cohere/command-r-08-2024':                          'Command R',
+    'cohere/command-r-plus-04-2024':                     'Command R+',
+    # IBM
+    'ibm/granite-3.0-8b-instruct':                       'Granite 3.0 8B',
+    'ibm/granite-34b-code-instruct':                     'Granite 34B Code',
 }
 
 def now():
     return datetime.now(timezone.utc).isoformat()
 
 def get_api_key(model: str) -> str:
-    if "mistral" in model.lower():
-        return os.getenv("NVIDIA_API_KEY_MISTRAL") or os.getenv("NVIDIA_API_KEY_CHAT")
-    if "405b" in model or "llama-3.1-70b" in model:
-        return os.getenv("NVIDIA_API_KEY_CODE") or os.getenv("NVIDIA_API_KEY_CHAT")
-    return os.getenv("NVIDIA_API_KEY_CHAT")
+    m = model.lower()
+    if "mistral" in m or "mixtral" in m or "codestral" in m:
+        return os.getenv("NVIDIA_API_KEY_MISTRAL") or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CHAT")
+    if "405b" in m:
+        return os.getenv("NVIDIA_API_KEY_CODE") or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CHAT")
+    return os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CHAT") or os.getenv("NVIDIA_API_KEY_CODE")
 
 def build_collab_system(model_id: str, all_models: list, previous_responses: dict, user_query: str) -> str:
     all_labels = [MODEL_LABELS.get(m, m) for m in all_models]

@@ -23,7 +23,13 @@ CODE_SYSTEM = (
 @router.post("/code/stream")
 async def code_stream(body: CodeRequest):
     model = body.model
-    api_key = os.getenv("NVIDIA_API_KEY_CODE")
+    m = model.lower()
+    if "mistral" in m or "mixtral" in m or "codestral" in m:
+        api_key = os.getenv("NVIDIA_API_KEY_MISTRAL") or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CODE")
+    elif "405b" in m:
+        api_key = os.getenv("NVIDIA_API_KEY_CODE") or os.getenv("NVIDIA_API_KEY")
+    else:
+        api_key = os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CODE") or os.getenv("NVIDIA_API_KEY_CHAT")
     client = AsyncOpenAI(base_url=NVIDIA_BASE, api_key=api_key)
 
     msg_id = str(uuid.uuid4())

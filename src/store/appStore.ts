@@ -17,42 +17,61 @@ export interface MixingModel {
 
 // All text models support both chat and code
 export const MIXING_MODELS: MixingModel[] = [
-  {
-    id: 'meta/llama-3.1-70b-instruct',
-    label: 'Llama 3.1 70B',
-    initial: 'L',
-    provider: 'META',
-    context: '128K',
-    speed: '145T/S',
-    color: '#a78bfa',
-  },
-  {
-    id: 'meta/llama-3.1-405b-instruct',
-    label: 'Llama 3.1 405B',
-    initial: 'L',
-    provider: 'META',
-    context: '128K',
-    speed: '89T/S',
-    color: '#818cf8',
-  },
-  {
-    id: 'mistralai/mistral-large-3-675b-instruct-2512',
-    label: 'Mistral 675B',
-    initial: 'M',
-    provider: 'MISTRAL',
-    context: '128K',
-    speed: '95T/S',
-    color: '#fb923c',
-  },
-  {
-    id: 'meta/llama-3.1-8b-instruct',
-    label: 'Llama 3.1 8B',
-    initial: 'L',
-    provider: 'META',
-    context: '128K',
-    speed: '320T/S',
-    color: '#34d399',
-  },
+  // ── META ────────────────────────────────────────────────────
+  { id: 'meta/llama-3.2-3b-instruct',                       label: 'Llama 3.2 3B',         initial: 'L', provider: 'META',      context: '128K', speed: '450T/S', color: '#ddd6fe' },
+  { id: 'meta/llama-3.1-8b-instruct',                       label: 'Llama 3.1 8B',         initial: 'L', provider: 'META',      context: '128K', speed: '320T/S', color: '#c4b5fd' },
+  { id: 'meta/llama-3.2-11b-vision-instruct',               label: 'Llama 3.2 11B Vision', initial: 'L', provider: 'META',      context: '128K', speed: '180T/S', color: '#a78bfa' },
+  { id: 'meta/llama-3.1-70b-instruct',                      label: 'Llama 3.1 70B',        initial: 'L', provider: 'META',      context: '128K', speed: '145T/S', color: '#8b5cf6' },
+  { id: 'meta/llama-3.3-70b-instruct',                      label: 'Llama 3.3 70B',        initial: 'L', provider: 'META',      context: '128K', speed: '140T/S', color: '#7c3aed' },
+  { id: 'meta/llama-3.2-90b-vision-instruct',               label: 'Llama 3.2 90B Vision', initial: 'L', provider: 'META',      context: '128K', speed: '60T/S',  color: '#6d28d9' },
+  { id: 'meta/llama-3.1-405b-instruct',                     label: 'Llama 3.1 405B',       initial: 'L', provider: 'META',      context: '128K', speed: '89T/S',  color: '#5b21b6' },
+  { id: 'meta/llama-4-scout-17b-16e-instruct',              label: 'Llama 4 Scout',        initial: 'L', provider: 'META',      context: '10M',  speed: '120T/S', color: '#4c1d95' },
+  { id: 'meta/llama-4-maverick-17b-128e-instruct',          label: 'Llama 4 Maverick',     initial: 'L', provider: 'META',      context: '1M',   speed: '85T/S',  color: '#3b0764' },
+
+  // ── MISTRAL ─────────────────────────────────────────────────
+  { id: 'mistralai/mistral-7b-instruct-v0.3',               label: 'Mistral 7B',           initial: 'M', provider: 'MISTRAL',   context: '32K',  speed: '250T/S', color: '#fed7aa' },
+  { id: 'mistralai/mistral-nemo-12b-instruct',               label: 'Mistral Nemo 12B',     initial: 'M', provider: 'MISTRAL',   context: '128K', speed: '200T/S', color: '#fdba74' },
+  { id: 'mistralai/mixtral-8x7b-instruct-v0.1',             label: 'Mixtral 8×7B',         initial: 'M', provider: 'MISTRAL',   context: '32K',  speed: '160T/S', color: '#fb923c' },
+  { id: 'mistralai/codestral-22b-instruct-v0.1',            label: 'Codestral 22B',        initial: 'M', provider: 'MISTRAL',   context: '32K',  speed: '130T/S', color: '#f97316' },
+  { id: 'mistralai/mixtral-8x22b-instruct-v0.1',            label: 'Mixtral 8×22B',        initial: 'M', provider: 'MISTRAL',   context: '64K',  speed: '100T/S', color: '#ea580c' },
+  { id: 'mistralai/mistral-large-3-675b-instruct-2512',     label: 'Mistral 675B',         initial: 'M', provider: 'MISTRAL',   context: '128K', speed: '95T/S',  color: '#c2410c' },
+
+  // ── GOOGLE ──────────────────────────────────────────────────
+  { id: 'google/gemma-2-9b-it',                             label: 'Gemma 2 9B',           initial: 'G', provider: 'GOOGLE',    context: '8K',   speed: '230T/S', color: '#a5f3fc' },
+  { id: 'google/codegemma-7b-it',                           label: 'CodeGemma 7B',         initial: 'G', provider: 'GOOGLE',    context: '8K',   speed: '220T/S', color: '#67e8f9' },
+  { id: 'google/gemma-2-27b-it',                            label: 'Gemma 2 27B',          initial: 'G', provider: 'GOOGLE',    context: '8K',   speed: '120T/S', color: '#22d3ee' },
+  { id: 'google/gemma-3-12b-it',                            label: 'Gemma 3 12B',          initial: 'G', provider: 'GOOGLE',    context: '128K', speed: '180T/S', color: '#06b6d4' },
+  { id: 'google/gemma-3-27b-it',                            label: 'Gemma 3 27B',          initial: 'G', provider: 'GOOGLE',    context: '128K', speed: '110T/S', color: '#0891b2' },
+
+  // ── MICROSOFT ───────────────────────────────────────────────
+  { id: 'microsoft/phi-3-mini-128k-instruct',               label: 'Phi-3 Mini',           initial: 'Φ', provider: 'MICROSOFT', context: '128K', speed: '280T/S', color: '#99f6e4' },
+  { id: 'microsoft/phi-3.5-mini-instruct',                  label: 'Phi-3.5 Mini',         initial: 'Φ', provider: 'MICROSOFT', context: '128K', speed: '270T/S', color: '#2dd4bf' },
+  { id: 'microsoft/phi-3-medium-128k-instruct',             label: 'Phi-3 Medium',         initial: 'Φ', provider: 'MICROSOFT', context: '128K', speed: '160T/S', color: '#14b8a6' },
+  { id: 'microsoft/phi-4',                                  label: 'Phi-4',                initial: 'Φ', provider: 'MICROSOFT', context: '16K',  speed: '150T/S', color: '#0d9488' },
+
+  // ── QWEN ────────────────────────────────────────────────────
+  { id: 'qwen/qwen2.5-7b-instruct',                         label: 'Qwen 2.5 7B',          initial: 'Q', provider: 'QWEN',      context: '32K',  speed: '260T/S', color: '#fef08a' },
+  { id: 'qwen/qwen2.5-72b-instruct',                        label: 'Qwen 2.5 72B',         initial: 'Q', provider: 'QWEN',      context: '32K',  speed: '110T/S', color: '#fbbf24' },
+  { id: 'qwen/qwq-32b',                                     label: 'QwQ 32B',              initial: 'Q', provider: 'QWEN',      context: '32K',  speed: '80T/S',  color: '#f59e0b' },
+
+  // ── DEEPSEEK ────────────────────────────────────────────────
+  { id: 'deepseek-ai/deepseek-r1-distill-qwen-7b',          label: 'DeepSeek R1 7B',       initial: 'D', provider: 'DEEPSEEK',  context: '32K',  speed: '200T/S', color: '#fca5a5' },
+  { id: 'deepseek-ai/deepseek-r1-distill-llama-70b',        label: 'DeepSeek R1 70B',      initial: 'D', provider: 'DEEPSEEK',  context: '32K',  speed: '100T/S', color: '#f87171' },
+  { id: 'deepseek-ai/deepseek-r1',                          label: 'DeepSeek R1',          initial: 'D', provider: 'DEEPSEEK',  context: '64K',  speed: '70T/S',  color: '#ef4444' },
+  { id: 'deepseek-ai/deepseek-v3',                          label: 'DeepSeek V3',          initial: 'D', provider: 'DEEPSEEK',  context: '128K', speed: '90T/S',  color: '#dc2626' },
+
+  // ── NVIDIA ──────────────────────────────────────────────────
+  { id: 'nvidia/llama-3.1-nemotron-nano-8b-v1',             label: 'Nemotron Nano 8B',     initial: 'N', provider: 'NVIDIA',    context: '128K', speed: '280T/S', color: '#86efac' },
+  { id: 'nvidia/llama-3.1-nemotron-70b-instruct',           label: 'Nemotron 70B',         initial: 'N', provider: 'NVIDIA',    context: '128K', speed: '120T/S', color: '#4ade80' },
+  { id: 'nvidia/llama-3.3-nemotron-super-49b-v1',           label: 'Nemotron Super 49B',   initial: 'N', provider: 'NVIDIA',    context: '128K', speed: '130T/S', color: '#22c55e' },
+
+  // ── COHERE ──────────────────────────────────────────────────
+  { id: 'cohere/command-r-08-2024',                         label: 'Command R',            initial: 'C', provider: 'COHERE',    context: '128K', speed: '140T/S', color: '#a5b4fc' },
+  { id: 'cohere/command-r-plus-04-2024',                    label: 'Command R+',           initial: 'C', provider: 'COHERE',    context: '128K', speed: '90T/S',  color: '#818cf8' },
+
+  // ── IBM ─────────────────────────────────────────────────────
+  { id: 'ibm/granite-3.0-8b-instruct',                      label: 'Granite 3.0 8B',       initial: 'I', provider: 'IBM',       context: '4K',   speed: '250T/S', color: '#94a3b8' },
+  { id: 'ibm/granite-34b-code-instruct',                    label: 'Granite 34B Code',     initial: 'I', provider: 'IBM',       context: '128K', speed: '100T/S', color: '#64748b' },
 ]
 
 export const IMAGE_MODELS = [

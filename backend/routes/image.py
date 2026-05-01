@@ -6,16 +6,15 @@ from datetime import datetime, timezone
 
 router = APIRouter(tags=["image"])
 
-# FLUX 1 Dev via NVIDIA NIM — payload: {prompt, width, height, seed}
-# Response: {artifacts: [{base64: "..."}]}
-IMAGE_ENDPOINT = "https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-dev"
+NVIDIA_GENAI_BASE = "https://ai.api.nvidia.com/v1/genai"
 
 def now():
     return datetime.now(timezone.utc).isoformat()
 
 @router.post("/image/generate")
 async def generate_image(body: ImageRequest):
-    api_key = os.getenv("NVIDIA_API_KEY_IMAGE")
+    api_key = os.getenv("NVIDIA_API_KEY_IMAGE") or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CHAT")
+    endpoint = f"{NVIDIA_GENAI_BASE}/{body.model}"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -30,7 +29,7 @@ async def generate_image(body: ImageRequest):
     }
 
     async with httpx.AsyncClient(timeout=120.0) as client:
-        resp = await client.post(IMAGE_ENDPOINT, headers=headers, json=payload)
+        resp = await client.post(endpoint, headers=headers, json=payload)
 
     if resp.status_code != 200:
         raise HTTPException(status_code=resp.status_code, detail=resp.text)

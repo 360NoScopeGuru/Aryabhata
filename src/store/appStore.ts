@@ -75,7 +75,12 @@ export const MIXING_MODELS: MixingModel[] = [
 ]
 
 export const IMAGE_MODELS = [
-  { id: 'black-forest-labs/flux.1-dev', label: 'FLUX 1 Dev', badge: 'HD' },
+  { id: 'black-forest-labs/flux.1-schnell',              label: 'FLUX.1 Schnell',    badge: 'Fast'  },
+  { id: 'black-forest-labs/flux.1-dev',                  label: 'FLUX.1 Dev',        badge: 'HD'    },
+  { id: 'stabilityai/stable-diffusion-xl',               label: 'SDXL',              badge: 'Pro'   },
+  { id: 'stabilityai/stable-diffusion-3-medium',         label: 'SD3 Medium',        badge: 'SD3'   },
+  { id: 'stabilityai/stable-diffusion-3.5-large',        label: 'SD3.5 Large',       badge: 'Best'  },
+  { id: 'stabilityai/stable-diffusion-3.5-large-turbo',  label: 'SD3.5 Turbo',       badge: 'Fast'  },
 ]
 
 export const SAMPLING_PRESETS: Record<SamplingPreset, { temperature: number; topP: number; topK: number }> = {

@@ -76,7 +76,7 @@ async def code_stream(body: CodeRequest):
         full_text = "".join(full_response)
         output_tokens = max(1, char_count // 4)
         try:
-            async with await get_db() as db:
+            async with get_db() as db:
                 user_msg = body.messages[-1]
                 await db.execute(
                     "INSERT INTO messages (id,conversation_id,role,content,mode,model,created_at) VALUES (?,?,?,?,?,?,?)",

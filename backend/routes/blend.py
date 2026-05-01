@@ -151,7 +151,7 @@ async def blend_stream(body: BlendRequest):
 
         # Persist all messages to DB
         try:
-            async with await get_db() as db:
+            async with get_db() as db:
                 user_msg = body.messages[-1]
                 await db.execute(
                     "INSERT INTO messages (id,conversation_id,role,content,mode,model,created_at) VALUES (?,?,?,?,?,?,?)",

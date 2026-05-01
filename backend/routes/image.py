@@ -43,7 +43,7 @@ async def generate_image(body: ImageRequest):
     image_url = f"data:image/jpeg;base64,{b64}"
 
     msg_id = str(uuid.uuid4())
-    async with await get_db() as db:
+    async with get_db() as db:
         await db.execute(
             "INSERT INTO messages (id,conversation_id,role,content,mode,model,created_at) VALUES (?,?,?,?,?,?,?)",
             (str(uuid.uuid4()), body.conversation_id, "user", body.prompt, "image", body.model, now())

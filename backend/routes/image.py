@@ -1,15 +1,33 @@
 from fastapi import APIRouter, HTTPException
 from models import ImageRequest
 from database import get_db
-import os, uuid, httpx
+import os, uuid, httpx, asyncio
+import cloudinary
+import cloudinary.uploader
 from datetime import datetime, timezone
 
 router = APIRouter(tags=["image"])
 
 NVIDIA_GENAI_BASE = "https://ai.api.nvidia.com/v1/genai"
 
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True,
+)
+
 def now():
     return datetime.now(timezone.utc).isoformat()
+
+def _upload_to_cloudinary(b64: str, public_id: str) -> str:
+    result = cloudinary.uploader.upload(
+        f"data:image/jpeg;base64,{b64}",
+        folder="aryabhata",
+        public_id=public_id,
+        overwrite=True,
+    )
+    return result["secure_url"]
 
 @router.post("/image/generate")
 async def generate_image(body: ImageRequest):
@@ -40,9 +58,15 @@ async def generate_image(body: ImageRequest):
         raise HTTPException(status_code=500, detail="No image returned")
 
     b64 = artifacts[0].get("base64", "")
-    image_url = f"data:image/jpeg;base64,{b64}"
-
     msg_id = str(uuid.uuid4())
+
+    # Upload to Cloudinary in a thread (SDK is synchronous)
+    try:
+        image_url = await asyncio.to_thread(_upload_to_cloudinary, b64, msg_id)
+    except Exception:
+        # Fallback to base64 if Cloudinary upload fails
+        image_url = f"data:image/jpeg;base64,{b64}"
+
     async with get_db() as db:
         await db.execute(
             "INSERT INTO messages (id,conversation_id,role,content,mode,model,created_at) VALUES (?,?,?,?,?,?,?)",
@@ -56,6 +80,5 @@ async def generate_image(body: ImageRequest):
             "UPDATE conversations SET updated_at=? WHERE id=?",
             (now(), body.conversation_id)
         )
-        await db.commit()
 
     return {"id": msg_id, "image_url": image_url, "prompt": body.prompt}

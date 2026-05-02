@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, type KeyboardEvent, type ClipboardEvent } from 'react'
 import { useAppStore, MIXING_MODELS, getActiveModel, isBlendMode } from '@/store/appStore'
+import { v4 as uuid } from 'uuid'
 
 interface Props {
   onSend: (text: string, imageBase64?: string) => void
@@ -12,8 +13,11 @@ interface Props {
 export default function ChatInput({ onSend, onStop, streaming, placeholder, disabled }: Props) {
   const [value, setValue] = useState('')
   const [pastedImage, setPastedImage] = useState<string | null>(null)
+  const [promptsOpen, setPromptsOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveTitle, setSaveTitle] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const { mode, selectedModels } = useAppStore()
+  const { mode, selectedModels, savedPrompts, addPrompt, removePrompt } = useAppStore()
 
   useEffect(() => {
     const ta = textareaRef.current
@@ -21,6 +25,16 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
     ta.style.height = 'auto'
     ta.style.height = Math.min(ta.scrollHeight, 180) + 'px'
   }, [value])
+
+  useEffect(() => {
+    if (!promptsOpen) return
+    const handler = (e: MouseEvent) => {
+      const el = document.getElementById('prompt-library-popover')
+      if (el && !el.contains(e.target as Node)) setPromptsOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [promptsOpen])
 
   const handleKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
@@ -51,10 +65,20 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }
 
+  const handleSavePrompt = () => {
+    const trimmed = value.trim()
+    if (!trimmed) return
+    const title = saveTitle.trim() || trimmed.slice(0, 40)
+    addPrompt({ id: uuid(), title, content: trimmed })
+    setSaveTitle('')
+    setSaving(false)
+  }
+
   const canSend = (value.trim() || pastedImage) && !disabled && !streaming
   const blend = isBlendMode(selectedModels)
   const activeModelId = mode !== 'image' ? getActiveModel(selectedModels) : null
   const activeModel = activeModelId ? MIXING_MODELS.find(m => m.id === activeModelId) : null
+  const estimatedTokens = Math.ceil(value.length / 4)
 
   return (
     <div className="composer-wrap">
@@ -75,7 +99,54 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
               Image attached
             </span>
           )}
+
+          {/* Prompt library */}
+          <div style={{ position: 'relative' }} id="prompt-library-popover">
+            <button
+              className="composer-pill"
+              style={{ cursor: 'pointer' }}
+              onClick={() => { setPromptsOpen(p => !p); setSaving(false) }}
+              title="Prompt library"
+            >
+              ⌘ Prompts{savedPrompts.length > 0 ? ` (${savedPrompts.length})` : ''}
+            </button>
+
+            {promptsOpen && (
+              <div className="prompt-library-popover">
+                <div className="pl-header">
+                  <span>Prompt Library</span>
+                  {value.trim() && (
+                    <button className="pl-save-btn" onClick={() => setSaving(s => !s)}>+ Save current</button>
+                  )}
+                </div>
+                {saving && (
+                  <div className="pl-save-row">
+                    <input
+                      className="pl-title-input"
+                      placeholder="Title (optional)…"
+                      value={saveTitle}
+                      onChange={e => setSaveTitle(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleSavePrompt() }}
+                      autoFocus
+                    />
+                    <button className="send-btn" style={{ fontSize: '9px', padding: '3px 10px' }} onClick={handleSavePrompt}>Save</button>
+                  </div>
+                )}
+                {savedPrompts.length === 0 && !saving && (
+                  <div className="pl-empty">No saved prompts yet</div>
+                )}
+                {savedPrompts.map(p => (
+                  <div key={p.id} className="pl-item" onClick={() => { setValue(p.content); setPromptsOpen(false); textareaRef.current?.focus() }}>
+                    <span className="pl-item-title">{p.title}</span>
+                    <button className="pl-delete-btn" onClick={e => { e.stopPropagation(); removePrompt(p.id) }} title="Remove">✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <span style={{ marginLeft: 'auto', fontSize: '9px', letterSpacing: '.1em', color: 'var(--ink-faint)' }}>
+            {value.length > 0 && <span style={{ color: 'var(--ink-dim)', marginRight: '6px' }}>~{estimatedTokens} tok</span>}
             ENTER · SHIFT+ENTER↵
           </span>
         </div>
@@ -92,6 +163,7 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
 
         <textarea
           ref={textareaRef}
+          id="composer-textarea"
           className="composer-input"
           value={value}
           onChange={e => setValue(e.target.value)}

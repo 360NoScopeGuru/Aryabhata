@@ -13,7 +13,7 @@ export default function ChatMode({ conversationId }: Props) {
     selectedModels, autoRoute, setMode, updateConversationTitle,
     addSessionTokens, updateLastMessageTelemetry, updateTelemetry, bumpThreadCount,
     temperature, topP, topK, frequencyPenalty, presencePenalty, maxTokens,
-    telemetry,
+    telemetry, systemPrompt, truncateMessagesFrom, updateMessageContent,
   } = useAppStore()
   const { stream, stop, streaming } = useStream()
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -96,6 +96,7 @@ export default function ChatMode({ conversationId }: Props) {
           models: selectedModels,
           temperature, top_p: topP, top_k: topK,
           max_tokens: maxTokens,
+          system_prompt: systemPrompt || undefined,
         },
         {
           onModelStart: (modelId) => {
@@ -154,6 +155,7 @@ export default function ChatMode({ conversationId }: Props) {
           frequency_penalty: frequencyPenalty,
           presence_penalty: presencePenalty,
           max_tokens: maxTokens,
+          system_prompt: systemPrompt || undefined,
         },
         {
           onFirstToken: (ms) => {
@@ -183,6 +185,82 @@ export default function ChatMode({ conversationId }: Props) {
         }
       )
     }
+  }
+
+  const restream = async (msgsToSend: Message[]) => {
+    const allMsgs = msgsToSend.map(m => ({ role: m.role, content: m.content }))
+    updateTelemetry({ streaming: true, tpot: 0, ttft: 0 })
+    const startTime = Date.now()
+    let ttftMs = 0
+    const prevSpark = telemetry.spark
+
+    if (blend) {
+      await stream('/api/blend/stream', {
+        conversation_id: conversationId, messages: allMsgs,
+        models: selectedModels, temperature, top_p: topP, top_k: topK,
+        max_tokens: maxTokens, system_prompt: systemPrompt || undefined,
+      }, {
+        onModelStart: (modelId) => {
+          setThinkingModel(modelId)
+          addMessage({ id: uuid(), conversation_id: conversationId, role: 'assistant', content: '', mode: 'chat', model: modelId, blend: true, created_at: new Date().toISOString() })
+        },
+        onFirstToken: (ms) => { ttftMs = ms; setThinkingModel(null); updateTelemetry({ ttft: ms }) },
+        onDelta: (delta) => { setThinkingModel(null); appendToLastMessage(conversationId, delta); addSessionTokens(Math.ceil(delta.length / 4)) },
+        onModelDone: () => { setThinkingModel(null); updateLastMessageTelemetry(conversationId, { finishReason: 'stop' }) },
+        onDone: (_id, outputTokens) => {
+          const tokenCount = outputTokens ?? 0
+          const tps = tokenCount > 0 ? (tokenCount / Math.max(1, Date.now() - startTime - ttftMs)) * 1000 : 0
+          updateTelemetry({ streaming: false, tpot: tps, outputTokens: tokenCount, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
+          setThinkingModel(null)
+        },
+        onError: () => { setThinkingModel(null); updateTelemetry({ streaming: false }) },
+      })
+    } else {
+      addMessage({ id: uuid(), conversation_id: conversationId, role: 'assistant', content: '', mode: 'chat', model: activeModelId, created_at: new Date().toISOString() })
+      setThinkingModel(activeModelId)
+      await stream('/api/chat/stream', {
+        conversation_id: conversationId, messages: allMsgs, model: activeModelId,
+        temperature, top_p: topP, top_k: topK,
+        frequency_penalty: frequencyPenalty, presence_penalty: presencePenalty,
+        max_tokens: maxTokens, system_prompt: systemPrompt || undefined,
+      }, {
+        onFirstToken: (ms) => { ttftMs = ms; setThinkingModel(null); updateTelemetry({ ttft: ms, streaming: true }) },
+        onDelta: (delta) => { setThinkingModel(null); appendToLastMessage(conversationId, delta); addSessionTokens(Math.ceil(delta.length / 4)) },
+        onDone: (_id, outputTokens) => {
+          const latencyMs = Date.now() - startTime
+          const tokenCount = outputTokens ?? 0
+          const tps = tokenCount > 0 ? (tokenCount / Math.max(1, latencyMs - ttftMs)) * 1000 : 0
+          updateTelemetry({ streaming: false, ttft: ttftMs, tpot: tps, outputTokens: tokenCount, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
+          updateLastMessageTelemetry(conversationId, { ttft: ttftMs, tpot: tps, latency: latencyMs, outputTokens: tokenCount, finishReason: 'stop' })
+          setThinkingModel(null)
+        },
+        onError: () => { setThinkingModel(null); updateTelemetry({ streaming: false }) },
+      })
+    }
+  }
+
+  const handleRegenerate = async () => {
+    const msgs = convMessages
+    // Find last user message index
+    let lastUserIdx = -1
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === 'user') { lastUserIdx = i; break }
+    }
+    if (lastUserIdx === -1) return
+    const firstAfter = msgs[lastUserIdx + 1]
+    if (firstAfter) {
+      try { await fetch(`/api/conversations/${conversationId}/messages/${firstAfter.id}/onwards`, { method: 'DELETE' }) } catch {}
+    }
+    truncateMessagesFrom(conversationId, lastUserIdx + 1)
+    await restream(msgs.slice(0, lastUserIdx + 1))
+  }
+
+  const handleEdit = async (msgId: string, msgIndex: number, newContent: string) => {
+    try { await fetch(`/api/conversations/${conversationId}/messages/${msgId}/onwards`, { method: 'DELETE' }) } catch {}
+    updateMessageContent(conversationId, msgId, newContent)
+    truncateMessagesFrom(conversationId, msgIndex + 1)
+    const updatedMsgs = [...convMessages.slice(0, msgIndex), { ...convMessages[msgIndex], content: newContent }]
+    await restream(updatedMsgs)
   }
 
   const thinkingModelInfo = thinkingModel ? MIXING_MODELS.find(m => m.id === thinkingModel) : null
@@ -225,6 +303,9 @@ export default function ChatMode({ conversationId }: Props) {
             key={msg.id}
             message={msg}
             isStreaming={streaming && i === convMessages.length - 1 && msg.role === 'assistant' && !thinkingModel}
+            isLast={i === convMessages.length - 1}
+            onRegenerate={!streaming ? handleRegenerate : undefined}
+            onEdit={!streaming && msg.role === 'user' ? (newContent) => handleEdit(msg.id, i, newContent) : undefined}
           />
         ))}
 

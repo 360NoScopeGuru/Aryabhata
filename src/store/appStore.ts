@@ -158,6 +158,10 @@ interface AppState {
   // Live telemetry
   telemetry: Telemetry
 
+  // System prompt + prompt library
+  systemPrompt: string
+  savedPrompts: { id: string; title: string; content: string }[]
+
   // Session meta
   sessionTokens: number
   projectName: string
@@ -197,6 +201,12 @@ interface AppState {
   addSessionTokens: (n: number) => void
   setProjectName: (n: string) => void
   bumpThreadCount: () => void
+
+  setSystemPrompt: (p: string) => void
+  addPrompt: (p: { id: string; title: string; content: string }) => void
+  removePrompt: (id: string) => void
+  truncateMessagesFrom: (convId: string, index: number) => void
+  updateMessageContent: (convId: string, msgId: string, content: string) => void
 }
 
 export function getActiveModel(selectedModels: string[]): string {
@@ -238,6 +248,8 @@ export const useAppStore = create<AppState>()(
         cost: 0, carbon: 0, spark: Array(20).fill(0), streaming: false,
       },
 
+      systemPrompt: '',
+      savedPrompts: [],
       sessionTokens: 0,
       projectName: 'Untitled Project',
       threadCount: 0,
@@ -311,6 +323,19 @@ export const useAppStore = create<AppState>()(
       addSessionTokens: (n) => set((s) => ({ sessionTokens: s.sessionTokens + n })),
       setProjectName: (n) => set({ projectName: n }),
       bumpThreadCount: () => set((s) => ({ threadCount: s.threadCount + 1 })),
+
+      setSystemPrompt: (p) => set({ systemPrompt: p }),
+      addPrompt: (p) => set((s) => ({ savedPrompts: [...s.savedPrompts, p] })),
+      removePrompt: (id) => set((s) => ({ savedPrompts: s.savedPrompts.filter(p => p.id !== id) })),
+      truncateMessagesFrom: (convId, index) => set((s) => ({
+        messages: { ...s.messages, [convId]: (s.messages[convId] ?? []).slice(0, index) },
+      })),
+      updateMessageContent: (convId, msgId, content) => set((s) => ({
+        messages: {
+          ...s.messages,
+          [convId]: (s.messages[convId] ?? []).map(m => m.id === msgId ? { ...m, content } : m),
+        },
+      })),
     }),
     {
       name: 'aryabhata-v3',
@@ -331,6 +356,8 @@ export const useAppStore = create<AppState>()(
         presencePenalty: s.presencePenalty,
         maxTokens: s.maxTokens,
         projectName: s.projectName,
+        systemPrompt: s.systemPrompt,
+        savedPrompts: s.savedPrompts,
       }),
     }
   )

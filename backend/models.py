@@ -16,6 +16,7 @@ class ChatRequest(BaseModel):
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
     max_tokens: int = 4096
+    system_prompt: Optional[str] = None
 
 class CodeRequest(BaseModel):
     conversation_id: str
@@ -28,6 +29,7 @@ class CodeRequest(BaseModel):
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
     max_tokens: int = 4096
+    system_prompt: Optional[str] = None
 
 class BlendRequest(BaseModel):
     conversation_id: str
@@ -37,6 +39,7 @@ class BlendRequest(BaseModel):
     top_p: float = 0.95
     top_k: Optional[int] = None
     max_tokens: int = 2048
+    system_prompt: Optional[str] = None
 
 class ImageRequest(BaseModel):
     conversation_id: str

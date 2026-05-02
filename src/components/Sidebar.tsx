@@ -86,6 +86,7 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
 
       <div className="search-wrap">
         <input
+          id="session-search"
           className="search-input"
           type="search"
           placeholder="Search sessions…"

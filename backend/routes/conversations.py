@@ -53,3 +53,18 @@ async def update_title(conv_id: str, body: dict):
             (body["title"], now(), conv_id)
         )
     return {"ok": True}
+
+
+@router.delete("/{conv_id}/messages/{msg_id}/onwards")
+async def delete_messages_onwards(conv_id: str, msg_id: str):
+    async with get_db() as db:
+        row = await db.fetchone(
+            "SELECT created_at FROM messages WHERE id=? AND conversation_id=?",
+            (msg_id, conv_id)
+        )
+        if row:
+            await db.execute(
+                "DELETE FROM messages WHERE conversation_id=? AND created_at >= ?",
+                (conv_id, row["created_at"])
+            )
+    return {"ok": True}

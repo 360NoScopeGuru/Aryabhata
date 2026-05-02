@@ -45,7 +45,7 @@ const RegMark = ({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) => {
 }
 
 export default function App() {
-  const { mode, setMode, activeConversationId, setActiveConversation, addConversation, removeConversation, setConversations, theme } = useAppStore()
+  const { mode, setMode, activeConversationId, setActiveConversation, addConversation, removeConversation, setConversations, theme, conversations, messages } = useAppStore()
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -89,6 +89,39 @@ export default function App() {
     try { await fetch(`/api/conversations/${id}`, { method: 'DELETE' }) } catch {}
     removeConversation(id)
   }, [])
+
+  const exportConversation = useCallback(() => {
+    if (!activeConversationId) return
+    const conv = conversations.find(c => c.id === activeConversationId)
+    const msgs = messages[activeConversationId] ?? []
+    if (!conv || msgs.length === 0) return
+    const lines = [`# ${conv.title}\n`]
+    msgs.forEach(m => {
+      const role = m.role === 'user' ? '**You**' : `**Assistant** (${m.model ?? 'AI'})`
+      lines.push(`${role}\n\n${m.content}\n\n---\n`)
+    })
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `${conv.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }, [activeConversationId, conversations, messages])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'n') { e.preventDefault(); handleNewChat() }
+      if (e.ctrlKey && e.key === 'e') { e.preventDefault(); exportConversation() }
+      if (e.ctrlKey && e.key === 'k') {
+        e.preventDefault()
+        const el = document.getElementById('session-search') as HTMLInputElement | null
+        el?.focus()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [handleNewChat, exportConversation])
 
   const convId = activeConversationId
 

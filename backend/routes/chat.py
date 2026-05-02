@@ -58,9 +58,10 @@ async def chat_stream(body: ChatRequest):
     msg_id = str(uuid.uuid4())
     full_response = []
 
+    sys_msgs = [{"role": "system", "content": body.system_prompt}] if body.system_prompt else []
     create_kwargs = dict(
         model=model,
-        messages=[{"role": m.role, "content": m.content} for m in body.messages],
+        messages=sys_msgs + [{"role": m.role, "content": m.content} for m in body.messages],
         max_tokens=body.max_tokens,
         temperature=body.temperature,
         top_p=body.top_p,

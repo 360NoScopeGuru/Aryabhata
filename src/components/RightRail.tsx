@@ -36,6 +36,7 @@ export default function RightRail() {
     selectedImageModel, setSelectedImageModel,
     imageWidth, imageHeight, imageSteps, setImageSize, setImageSteps,
     codeLanguage, setCodeLanguage,
+    systemPrompt, setSystemPrompt,
   } = useAppStore()
 
   const blend = isBlendMode(selectedModels)
@@ -48,6 +49,20 @@ export default function RightRail() {
 
   return (
     <aside className="rail-right">
+      {/* System Prompt */}
+      {mode !== 'image' && (
+        <div className="tele-block">
+          <div className="tele-block-label">System Prompt</div>
+          <textarea
+            className="system-prompt-input"
+            value={systemPrompt}
+            onChange={e => setSystemPrompt(e.target.value)}
+            placeholder="Set a persona or instructions for all requests…"
+            rows={4}
+          />
+        </div>
+      )}
+
       <div className="tele-header">
         <h3>Telemetry</h3>
         {telemetry.streaming && (

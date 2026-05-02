@@ -9,6 +9,9 @@ import 'highlight.js/styles/github-dark.css'
 interface Props {
   message: Message
   isStreaming?: boolean
+  isLast?: boolean
+  onRegenerate?: () => void
+  onEdit?: (newContent: string) => void
 }
 
 function CodeBlock({ children, className }: { children: string; className?: string }) {
@@ -43,12 +46,25 @@ const toStr = (c: unknown): string =>
   Array.isArray(c) ? c.map(toStr).join('') :
   (c as any)?.props?.children ? toStr((c as any).props.children) : ''
 
-export default function MessageBubble({ message, isStreaming }: Props) {
+export default function MessageBubble({ message, isStreaming, isLast, onRegenerate, onEdit }: Props) {
   const isUser = message.role === 'user'
   const [traceOpen, setTraceOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editValue, setEditValue] = useState(message.content)
 
   const modelInfo = message.model ? MIXING_MODELS.find(m => m.id === message.model) : null
   const hasMetadata = !isUser && !isStreaming && (message.latency || message.ttft || message.outputTokens)
+
+  const confirmEdit = () => {
+    const trimmed = editValue.trim()
+    if (trimmed && trimmed !== message.content) onEdit?.(trimmed)
+    setEditing(false)
+  }
+
+  const cancelEdit = () => {
+    setEditValue(message.content)
+    setEditing(false)
+  }
 
   if (message.image_url) {
     return (
@@ -81,6 +97,22 @@ export default function MessageBubble({ message, isStreaming }: Props) {
       <div className="msg-who">
         <span className="who-label">{isUser ? 'YOU' : 'ASST'}</span>
         <span className="who-time">{formatTime(message.created_at)}</span>
+
+        {/* Action buttons */}
+        {!isStreaming && (
+          <div className="msg-actions">
+            {isUser && onEdit && (
+              <button className="msg-action-btn" onClick={() => { setEditValue(message.content); setEditing(true) }} title="Edit">
+                ✎
+              </button>
+            )}
+            {!isUser && isLast && onRegenerate && (
+              <button className="msg-action-btn" onClick={onRegenerate} title="Regenerate">
+                ↺
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {!isUser && modelInfo && (
@@ -95,7 +127,25 @@ export default function MessageBubble({ message, isStreaming }: Props) {
       )}
 
       <div className={`msg-body${isStreaming ? ' streaming' : ''}`}>
-        {isUser ? (
+        {editing ? (
+          <div className="edit-mode">
+            <textarea
+              className="edit-textarea"
+              value={editValue}
+              onChange={e => setEditValue(e.target.value)}
+              autoFocus
+              rows={Math.max(3, editValue.split('\n').length)}
+            />
+            <div className="edit-actions">
+              <button className="send-btn" style={{ fontSize: '10px', padding: '4px 14px' }} onClick={confirmEdit}>
+                Resend →
+              </button>
+              <button className="stop-btn" style={{ fontSize: '10px', padding: '4px 10px' }} onClick={cancelEdit}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : isUser ? (
           <span>{message.content}</span>
         ) : (
           <div className="prose-ai">

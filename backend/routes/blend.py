@@ -113,6 +113,8 @@ async def blend_stream(body: BlendRequest):
             client = AsyncOpenAI(base_url=NVIDIA_BASE, api_key=api_key)
 
             system_msg = build_collab_system(model_id, models, previous_responses, user_query)
+            if body.system_prompt:
+                system_msg += f"\n\nAdditional instructions: {body.system_prompt}"
             messages = [{"role": "system", "content": system_msg}] + [
                 {"role": m.role, "content": m.content} for m in body.messages
             ]

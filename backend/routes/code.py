@@ -38,6 +38,8 @@ async def code_stream(body: CodeRequest):
     system_msg = CODE_SYSTEM
     if body.language:
         system_msg += f" The user is working in {body.language}."
+    if body.system_prompt:
+        system_msg += f"\n\n{body.system_prompt}"
 
     messages = [{"role": "system", "content": system_msg}] + \
                [{"role": m.role, "content": m.content} for m in body.messages]

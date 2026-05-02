@@ -14,7 +14,7 @@ export default function CodeMode({ conversationId }: Props) {
     selectedModels, codeLanguage, updateConversationTitle, addSessionTokens,
     updateLastMessageTelemetry, updateTelemetry, bumpThreadCount,
     temperature, topP, topK, frequencyPenalty, presencePenalty, maxTokens,
-    telemetry,
+    telemetry, systemPrompt,
   } = useAppStore()
   const { stream, stop, streaming } = useStream()
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -88,6 +88,7 @@ export default function CodeMode({ conversationId }: Props) {
         frequency_penalty: frequencyPenalty,
         presence_penalty: presencePenalty,
         max_tokens: maxTokens,
+        system_prompt: systemPrompt || undefined,
       },
       {
         onFirstToken: (ms) => {

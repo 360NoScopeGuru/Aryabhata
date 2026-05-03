@@ -7,3 +7,4 @@ openai
 httpx
 aiofiles
 PyJWT[cryptography]
+cryptography

@@ -68,6 +68,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, mode }),
       })
+      if (!res.ok) throw new Error(`${res.status}`)
       const conv: Conversation = await res.json()
       addConversation(conv)
       setActiveConversation(conv.id)

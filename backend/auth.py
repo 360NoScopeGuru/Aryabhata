@@ -1,4 +1,5 @@
 import os
+import datetime
 import jwt
 from jwt import PyJWKClient
 from fastapi import Depends, HTTPException
@@ -18,33 +19,31 @@ def _get_jwks_client() -> PyJWKClient:
     return _jwks_client
 
 
+def _decode(token: str) -> dict:
+    global _jwks_client
+    client = _get_jwks_client()
+    signing_key = client.get_signing_key_from_jwt(token)
+    return jwt.decode(
+        token,
+        signing_key.key,
+        algorithms=["RS256", "RS512"],
+        leeway=datetime.timedelta(seconds=120),
+        options={"verify_aud": False},
+    )
+
+
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> str:
     token = credentials.credentials
     try:
-        client = _get_jwks_client()
-        signing_key = client.get_signing_key_from_jwt(token)
-        data = jwt.decode(
-            token,
-            signing_key.key,
-            algorithms=["RS256", "RS512"],
-            options={"verify_aud": False, "leeway": 60},
-        )
+        data = _decode(token)
         return data["sub"]
     except Exception as e:
-        print(f"[auth] JWT verification failed: {type(e).__name__}: {e}")
-        # Try re-fetching JWKS keys in case they were rotated
-        global _jwks_client
+        print(f"[auth] attempt 1 failed ({type(e).__name__}: {e}) — refreshing JWKS")
+        # Key may have been rotated; clear cache and retry once
         _jwks_client = None
         try:
-            client = _get_jwks_client()
-            signing_key = client.get_signing_key_from_jwt(token)
-            data = jwt.decode(
-                token,
-                signing_key.key,
-                algorithms=["RS256", "RS512"],
-                options={"verify_aud": False, "leeway": 60},
-            )
+            data = _decode(token)
             return data["sub"]
         except Exception as e2:
-            print(f"[auth] JWT retry also failed: {type(e2).__name__}: {e2}")
+            print(f"[auth] attempt 2 failed ({type(e2).__name__}: {e2})")
             raise HTTPException(status_code=401, detail="Invalid or expired token")

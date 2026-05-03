@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAppStore, type Message } from '@/store/appStore'
+import { useAuthFetch } from '@/hooks/useAuthFetch'
 import { v4 as uuid } from 'uuid'
 
 interface Props { conversationId: string }
@@ -13,6 +14,7 @@ const PRESET_PROMPTS = [
 
 export default function ImageMode({ conversationId }: Props) {
   const { messages, addMessage, selectedImageModel, imageWidth, imageHeight, imageSteps } = useAppStore()
+  const authFetch = useAuthFetch()
   const [prompt, setPrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -33,7 +35,7 @@ export default function ImageMode({ conversationId }: Props) {
     addMessage(userMsg)
 
     try {
-      const res = await fetch('/api/image/generate', {
+      const res = await authFetch('/api/image/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

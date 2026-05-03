@@ -1,7 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from models import BlendRequest
 from database import get_db
+from auth import get_current_user
 from openai import AsyncOpenAI
 import os, uuid, json, traceback
 from datetime import datetime, timezone
@@ -101,7 +102,7 @@ def build_collab_system(model_id: str, all_models: list, previous_responses: dic
 
 
 @router.post("/blend/stream")
-async def blend_stream(body: BlendRequest):
+async def blend_stream(body: BlendRequest, _: str = Depends(get_current_user)):
     models = body.models[:5]
 
     async def generate():

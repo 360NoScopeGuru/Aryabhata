@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { UserButton } from '@clerk/clerk-react'
+import { dark } from '@clerk/themes'
 import { useAppStore } from '@/store/appStore'
 
 function UTCClock() {
@@ -47,7 +49,7 @@ export default function TopBar() {
         <span className="brand-sub">LLM · Studio</span>
       </div>
 
-      {/* Right: meta */}
+      {/* Right: meta + user */}
       <div className="topbar-meta">
         <div className="meta-cell">
           <span className="k">THR</span>
@@ -57,6 +59,15 @@ export default function TopBar() {
           <span className="k">UTC</span>
           <span className="v"><UTCClock /></span>
         </div>
+        <UserButton
+          appearance={{
+            baseTheme: dark,
+            elements: {
+              avatarBox: { width: 22, height: 22 },
+              userButtonPopoverCard: { background: '#0d0f12', border: '.5px solid rgba(122,215,255,.15)' },
+            },
+          }}
+        />
       </div>
     </header>
   )

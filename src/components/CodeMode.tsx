@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import MonacoEditor from '@monaco-editor/react'
+import { useAuth } from '@clerk/clerk-react'
 import { useAppStore, type Message, getActiveModel, MIXING_MODELS } from '@/store/appStore'
 import { useStream } from '@/hooks/useStream'
+import { useAuthFetch } from '@/hooks/useAuthFetch'
 import MessageBubble from './MessageBubble'
 import ChatInput from './ChatInput'
 import { v4 as uuid } from 'uuid'
@@ -17,6 +19,8 @@ export default function CodeMode({ conversationId }: Props) {
     telemetry, systemPrompt,
   } = useAppStore()
   const { stream, stop, streaming } = useStream()
+  const { getToken } = useAuth()
+  const authFetch = useAuthFetch()
   const bottomRef = useRef<HTMLDivElement>(null)
   const [editorCode, setEditorCode] = useState('# Write your code here\n')
   const [thinkingModel, setThinkingModel] = useState<string | null>(null)
@@ -26,7 +30,7 @@ export default function CodeMode({ conversationId }: Props) {
   const activeModel = MIXING_MODELS.find(m => m.id === activeModelId)
 
   useEffect(() => {
-    fetch(`/api/conversations/${conversationId}/messages`)
+    authFetch(`/api/conversations/${conversationId}/messages`)
       .then(r => r.json())
       .then(msgs => {
         setMessages(conversationId, msgs)
@@ -43,7 +47,7 @@ export default function CodeMode({ conversationId }: Props) {
     if (namedRef.current) return
     namedRef.current = true
     try {
-      const res = await fetch('/api/chat/name', {
+      const res = await authFetch('/api/chat/name', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversation_id: conversationId, first_message: firstUserMessage }),
@@ -76,6 +80,8 @@ export default function CodeMode({ conversationId }: Props) {
     const startTime = Date.now()
     let ttftMs = 0
     const prevSpark = telemetry.spark
+    const token = await getToken()
+    const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
 
     await stream(
       '/api/code/stream',
@@ -115,7 +121,8 @@ export default function CodeMode({ conversationId }: Props) {
           setThinkingModel(null)
           updateTelemetry({ streaming: false })
         },
-      }
+      },
+      authHeaders,
     )
   }
 

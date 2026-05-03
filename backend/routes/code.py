@@ -1,7 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from models import CodeRequest
 from database import get_db
+from auth import get_current_user
 from openai import AsyncOpenAI
 import os, uuid, json, traceback
 from datetime import datetime, timezone
@@ -21,7 +22,7 @@ CODE_SYSTEM = (
 )
 
 @router.post("/code/stream")
-async def code_stream(body: CodeRequest):
+async def code_stream(body: CodeRequest, _: str = Depends(get_current_user)):
     model = body.model
     m = model.lower()
     if "mistral" in m or "mixtral" in m or "codestral" in m:

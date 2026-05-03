@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react'
 import { useAppStore, type Conversation } from '@/store/appStore'
+import { useAuthFetch } from '@/hooks/useAuthFetch'
 import TopBar from '@/components/TopBar'
 import Sidebar from '@/components/Sidebar'
 import RightRail from '@/components/RightRail'
@@ -46,22 +47,23 @@ const RegMark = ({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) => {
 
 export default function App() {
   const { mode, setMode, activeConversationId, setActiveConversation, addConversation, removeConversation, setConversations, theme, conversations, messages } = useAppStore()
+  const authFetch = useAuthFetch()
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
 
   useEffect(() => {
-    fetch('/api/conversations')
+    authFetch('/api/conversations')
       .then((r) => r.json())
       .then((data) => setConversations(data))
       .catch(() => {})
-  }, [])
+  }, [authFetch])
 
   const handleNewChat = useCallback(async () => {
     const title = MODE_LABELS[mode]
     try {
-      const res = await fetch('/api/conversations', {
+      const res = await authFetch('/api/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, mode }),
@@ -78,7 +80,7 @@ export default function App() {
       addConversation(conv)
       setActiveConversation(conv.id)
     }
-  }, [mode])
+  }, [mode, authFetch])
 
   const handleSelectConversation = useCallback((c: Conversation) => {
     setActiveConversation(c.id)
@@ -86,9 +88,9 @@ export default function App() {
   }, [setMode])
 
   const handleDeleteConversation = useCallback(async (id: string) => {
-    try { await fetch(`/api/conversations/${id}`, { method: 'DELETE' }) } catch {}
+    try { await authFetch(`/api/conversations/${id}`, { method: 'DELETE' }) } catch {}
     removeConversation(id)
-  }, [])
+  }, [authFetch])
 
   const exportConversation = useCallback(() => {
     if (!activeConversationId) return

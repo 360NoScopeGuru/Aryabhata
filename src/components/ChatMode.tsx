@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { useAuth } from '@clerk/clerk-react'
 import { useAppStore, type Message, getActiveModel, isBlendMode, MIXING_MODELS } from '@/store/appStore'
 import { useStream } from '@/hooks/useStream'
+import { useAuthFetch } from '@/hooks/useAuthFetch'
 import MessageBubble from './MessageBubble'
 import ChatInput from './ChatInput'
 import { v4 as uuid } from 'uuid'
@@ -16,6 +18,8 @@ export default function ChatMode({ conversationId }: Props) {
     telemetry, systemPrompt, truncateMessagesFrom, updateMessageContent,
   } = useAppStore()
   const { stream, stop, streaming } = useStream()
+  const { getToken } = useAuth()
+  const authFetch = useAuthFetch()
   const bottomRef = useRef<HTMLDivElement>(null)
   const [thinkingModel, setThinkingModel] = useState<string | null>(null)
   const namedRef = useRef(false)
@@ -26,7 +30,7 @@ export default function ChatMode({ conversationId }: Props) {
   const activeModel = MIXING_MODELS.find(m => m.id === activeModelId)
 
   useEffect(() => {
-    fetch(`/api/conversations/${conversationId}/messages`)
+    authFetch(`/api/conversations/${conversationId}/messages`)
       .then(r => r.json())
       .then(msgs => {
         setMessages(conversationId, msgs)
@@ -43,7 +47,7 @@ export default function ChatMode({ conversationId }: Props) {
     if (namedRef.current) return
     namedRef.current = true
     try {
-      const res = await fetch('/api/chat/name', {
+      const res = await authFetch('/api/chat/name', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversation_id: conversationId, first_message: firstUserMessage }),
@@ -56,7 +60,7 @@ export default function ChatMode({ conversationId }: Props) {
   const handleSend = async (text: string, imageBase64?: string) => {
     if (autoRoute && !blend) {
       try {
-        const res = await fetch('/api/route', {
+        const res = await authFetch('/api/route', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: text }),
@@ -84,6 +88,9 @@ export default function ChatMode({ conversationId }: Props) {
     const startTime = Date.now()
     let ttftMs = 0
     const prevSpark = telemetry.spark
+
+    const token = await getToken()
+    const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
 
     if (blend) {
       // ── BLEND MODE ─────────────────────────────────────────
@@ -134,7 +141,8 @@ export default function ChatMode({ conversationId }: Props) {
             setThinkingModel(null)
             updateTelemetry({ streaming: false })
           },
-        }
+        },
+        authHeaders,
       )
     } else {
       // ── NORMAL MODE ─────────────────────────────────────────
@@ -182,7 +190,8 @@ export default function ChatMode({ conversationId }: Props) {
             setThinkingModel(null)
             updateTelemetry({ streaming: false })
           },
-        }
+        },
+        authHeaders,
       )
     }
   }
@@ -193,6 +202,8 @@ export default function ChatMode({ conversationId }: Props) {
     const startTime = Date.now()
     let ttftMs = 0
     const prevSpark = telemetry.spark
+    const token = await getToken()
+    const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
 
     if (blend) {
       await stream('/api/blend/stream', {
@@ -214,7 +225,7 @@ export default function ChatMode({ conversationId }: Props) {
           setThinkingModel(null)
         },
         onError: () => { setThinkingModel(null); updateTelemetry({ streaming: false }) },
-      })
+      }, authHeaders)
     } else {
       addMessage({ id: uuid(), conversation_id: conversationId, role: 'assistant', content: '', mode: 'chat', model: activeModelId, created_at: new Date().toISOString() })
       setThinkingModel(activeModelId)
@@ -235,13 +246,12 @@ export default function ChatMode({ conversationId }: Props) {
           setThinkingModel(null)
         },
         onError: () => { setThinkingModel(null); updateTelemetry({ streaming: false }) },
-      })
+      }, authHeaders)
     }
   }
 
   const handleRegenerate = async () => {
     const msgs = convMessages
-    // Find last user message index
     let lastUserIdx = -1
     for (let i = msgs.length - 1; i >= 0; i--) {
       if (msgs[i].role === 'user') { lastUserIdx = i; break }
@@ -249,14 +259,14 @@ export default function ChatMode({ conversationId }: Props) {
     if (lastUserIdx === -1) return
     const firstAfter = msgs[lastUserIdx + 1]
     if (firstAfter) {
-      try { await fetch(`/api/conversations/${conversationId}/messages/${firstAfter.id}/onwards`, { method: 'DELETE' }) } catch {}
+      try { await authFetch(`/api/conversations/${conversationId}/messages/${firstAfter.id}/onwards`, { method: 'DELETE' }) } catch {}
     }
     truncateMessagesFrom(conversationId, lastUserIdx + 1)
     await restream(msgs.slice(0, lastUserIdx + 1))
   }
 
   const handleEdit = async (msgId: string, msgIndex: number, newContent: string) => {
-    try { await fetch(`/api/conversations/${conversationId}/messages/${msgId}/onwards`, { method: 'DELETE' }) } catch {}
+    try { await authFetch(`/api/conversations/${conversationId}/messages/${msgId}/onwards`, { method: 'DELETE' }) } catch {}
     updateMessageContent(conversationId, msgId, newContent)
     truncateMessagesFrom(conversationId, msgIndex + 1)
     const updatedMsgs = [...convMessages.slice(0, msgIndex), { ...convMessages[msgIndex], content: newContent }]

@@ -1,7 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from models import ChatRequest, RouteRequest
 from database import get_db
+from auth import get_current_user
 from openai import AsyncOpenAI
 import os, uuid, json
 from datetime import datetime, timezone
@@ -45,12 +46,12 @@ async def detect_mode(prompt: str) -> str:
     return result if result in ("chat", "code", "image") else "chat"
 
 @router.post("/route")
-async def route_task(body: RouteRequest):
+async def route_task(body: RouteRequest, _: str = Depends(get_current_user)):
     mode = await detect_mode(body.prompt)
     return {"mode": mode}
 
 @router.post("/chat/stream")
-async def chat_stream(body: ChatRequest):
+async def chat_stream(body: ChatRequest, _: str = Depends(get_current_user)):
     model = body.model
     api_key = get_api_key(model)
     client = AsyncOpenAI(base_url=NVIDIA_BASE, api_key=api_key)
@@ -122,7 +123,7 @@ class NameRequest(BaseModel):
     first_message: str
 
 @router.post("/chat/name")
-async def name_conversation(body: NameRequest):
+async def name_conversation(body: NameRequest, _: str = Depends(get_current_user)):
     api_key = os.getenv("NVIDIA_API_KEY_ROUTER")
     client = AsyncOpenAI(base_url=NVIDIA_BASE, api_key=api_key)
     try:

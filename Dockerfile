@@ -18,6 +18,8 @@ RUN npm ci
 
 # Copy source and build frontend
 COPY . .
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
 RUN npm run build
 
 # Start FastAPI (serves both API and built React app)

@@ -19,15 +19,32 @@ def _get_jwks_client() -> PyJWKClient:
 
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> str:
+    token = credentials.credentials
     try:
         client = _get_jwks_client()
-        signing_key = client.get_signing_key_from_jwt(credentials.credentials)
+        signing_key = client.get_signing_key_from_jwt(token)
         data = jwt.decode(
-            credentials.credentials,
+            token,
             signing_key.key,
-            algorithms=["RS256"],
-            options={"verify_aud": False},
+            algorithms=["RS256", "RS512"],
+            options={"verify_aud": False, "leeway": 60},
         )
         return data["sub"]
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    except Exception as e:
+        print(f"[auth] JWT verification failed: {type(e).__name__}: {e}")
+        # Try re-fetching JWKS keys in case they were rotated
+        global _jwks_client
+        _jwks_client = None
+        try:
+            client = _get_jwks_client()
+            signing_key = client.get_signing_key_from_jwt(token)
+            data = jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=["RS256", "RS512"],
+                options={"verify_aud": False, "leeway": 60},
+            )
+            return data["sub"]
+        except Exception as e2:
+            print(f"[auth] JWT retry also failed: {type(e2).__name__}: {e2}")
+            raise HTTPException(status_code=401, detail="Invalid or expired token")

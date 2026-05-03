@@ -31,8 +31,9 @@ export default function ChatMode({ conversationId }: Props) {
 
   useEffect(() => {
     authFetch(`/api/conversations/${conversationId}/messages`)
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : [])
       .then(msgs => {
+        if (!Array.isArray(msgs)) return
         setMessages(conversationId, msgs)
         if (msgs.length > 0) namedRef.current = true
       })

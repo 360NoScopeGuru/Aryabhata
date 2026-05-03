@@ -55,8 +55,8 @@ export default function App() {
 
   useEffect(() => {
     authFetch('/api/conversations')
-      .then((r) => r.json())
-      .then((data) => setConversations(data))
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => Array.isArray(data) && setConversations(data))
       .catch(() => {})
   }, [authFetch])
 

@@ -5,25 +5,25 @@
    5 Themes: CAD · ORBIT · BRUTAL · LIQUID · PRISM
    ═══════════════════════════════════════════════ */
 
-/* ── CAD (Blueprint / default) ──────────────── */
+/* ── VOID (Cyberpunk / default) ─────────────── */
 :root {
-  --bg:        #090f1e;
-  --bg2:       #060c18;
-  --surface:   #0d1a30;
-  --surface2:  #122240;
-  --surface3:  #172a4e;
-  --ink:       #c8dfff;
-  --ink-dim:   rgba(200,223,255,.55);
-  --ink-faint: rgba(200,223,255,.22);
-  --ink-ghost: rgba(200,223,255,.1);
-  --line:      rgba(100,160,255,.22);
-  --line-soft: rgba(100,160,255,.10);
-  --accent:    #5eb8ff;
-  --accent2:   #ffd47a;
-  --ok:        #4affa8;
-  --warn:      #ff7a6e;
-  --glow:      rgba(94,184,255,.3);
-  --glow2:     rgba(94,184,255,.12);
+  --bg:        #07040f;
+  --bg2:       #050210;
+  --surface:   #100a20;
+  --surface2:  #1a1035;
+  --surface3:  #241848;
+  --ink:       #e2d4ff;
+  --ink-dim:   rgba(226,212,255,.58);
+  --ink-faint: rgba(226,212,255,.22);
+  --ink-ghost: rgba(226,212,255,.08);
+  --line:      rgba(160,80,255,.25);
+  --line-soft: rgba(160,80,255,.12);
+  --accent:    #b44dff;
+  --accent2:   #ff3daa;
+  --ok:        #00ffaa;
+  --warn:      #ff4455;
+  --glow:      rgba(180,77,255,.45);
+  --glow2:     rgba(180,77,255,.15);
   --r:         8px;
   --mono:      'JetBrains Mono', ui-monospace, monospace;
   --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -32,104 +32,138 @@
   color-scheme: dark;
 }
 
-/* ── ORBIT (Warm · Rounded) ─────────────────── */
+/* ── EMBER (Dark Fire) ───────────────────────── */
 :root[data-theme="orbit"] {
-  --bg:        #faf7f2;
-  --bg2:       #f3ede4;
-  --surface:   #f0e9de;
-  --surface2:  #e8dfd2;
-  --surface3:  #dfd5c6;
-  --ink:       #1c1108;
-  --ink-dim:   rgba(28,17,8,.6);
-  --ink-faint: rgba(28,17,8,.3);
-  --ink-ghost: rgba(28,17,8,.08);
-  --line:      rgba(160,100,40,.2);
-  --line-soft: rgba(160,100,40,.1);
-  --accent:    #d95f2b;
-  --accent2:   #e8a26a;
-  --ok:        #2a7a55;
-  --warn:      #c43c2a;
-  --glow:      rgba(217,95,43,.25);
-  --glow2:     rgba(217,95,43,.1);
-  --r:         18px;
-  --font-body: 'Space Grotesk', sans-serif;
+  --bg:        #0f0800;
+  --bg2:       #0a0500;
+  --surface:   #1e0f00;
+  --surface2:  #2d1800;
+  --surface3:  #3d2200;
+  --ink:       #ffe8cc;
+  --ink-dim:   rgba(255,232,204,.6);
+  --ink-faint: rgba(255,232,204,.25);
+  --ink-ghost: rgba(255,232,204,.08);
+  --line:      rgba(255,120,30,.25);
+  --line-soft: rgba(255,120,30,.12);
+  --accent:    #ff6b1a;
+  --accent2:   #ffd700;
+  --ok:        #44ff99;
+  --warn:      #ff3333;
+  --glow:      rgba(255,107,26,.45);
+  --glow2:     rgba(255,107,26,.15);
+  --r:         6px;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --border-w:  .5px;
+  color-scheme: dark;
+}
+
+/* ── ARCTIC (Clean Ice) ──────────────────────── */
+:root[data-theme="brutal"] {
+  --bg:        #f4f8ff;
+  --bg2:       #e8f0ff;
+  --surface:   #ffffff;
+  --surface2:  #eef3ff;
+  --surface3:  #dde8ff;
+  --ink:       #0a1628;
+  --ink-dim:   rgba(10,22,40,.62);
+  --ink-faint: rgba(10,22,40,.32);
+  --ink-ghost: rgba(10,22,40,.08);
+  --line:      rgba(0,100,255,.18);
+  --line-soft: rgba(0,100,255,.09);
+  --accent:    #0066ff;
+  --accent2:   #00c8ff;
+  --ok:        #00bb55;
+  --warn:      #ff2244;
+  --glow:      rgba(0,102,255,.3);
+  --glow2:     rgba(0,102,255,.1);
+  --r:         6px;
+  --font-body: 'Inter', -apple-system, sans-serif;
   --border-w:  1px;
   color-scheme: light;
 }
 
-/* ── BRUTAL (Black & White) ─────────────────── */
-:root[data-theme="brutal"] {
-  --bg:        #ffffff;
-  --bg2:       #f2f2f2;
-  --surface:   #f8f8f8;
-  --surface2:  #eeeeee;
-  --surface3:  #e4e4e4;
-  --ink:       #000000;
-  --ink-dim:   rgba(0,0,0,.6);
-  --ink-faint: rgba(0,0,0,.35);
-  --ink-ghost: rgba(0,0,0,.07);
-  --line:      rgba(0,0,0,.18);
-  --line-soft: rgba(0,0,0,.1);
-  --accent:    #000000;
-  --accent2:   #555555;
-  --ok:        #007700;
-  --warn:      #cc0000;
-  --glow:      rgba(0,0,0,.2);
-  --glow2:     rgba(0,0,0,.07);
-  --r:         0px;
-  --font-body: 'Inter', -apple-system, sans-serif;
-  --border-w:  1.5px;
-  color-scheme: light;
-}
-
-/* ── LIQUID (Parchment · Terracotta) ────────── */
+/* ── MATRIX (Terminal Green) ─────────────────── */
 :root[data-theme="liquid"] {
-  --bg:        #f4ecd8;
-  --bg2:       #ece0c4;
-  --surface:   #e8d8b8;
-  --surface2:  #deccaa;
-  --surface3:  #d4c09c;
-  --ink:       #2c1810;
-  --ink-dim:   rgba(44,24,16,.6);
-  --ink-faint: rgba(44,24,16,.3);
-  --ink-ghost: rgba(44,24,16,.07);
-  --line:      rgba(120,70,20,.22);
-  --line-soft: rgba(120,70,20,.1);
-  --accent:    #8b3a0f;
-  --accent2:   #c47a3c;
-  --ok:        #2d6a4f;
-  --warn:      #c1440e;
-  --glow:      rgba(139,58,15,.25);
-  --glow2:     rgba(139,58,15,.1);
+  --bg:        #020d02;
+  --bg2:       #010901;
+  --surface:   #061406;
+  --surface2:  #0a1e0a;
+  --surface3:  #0f280f;
+  --ink:       #a8ffb0;
+  --ink-dim:   rgba(168,255,176,.58);
+  --ink-faint: rgba(168,255,176,.22);
+  --ink-ghost: rgba(168,255,176,.08);
+  --line:      rgba(0,255,65,.2);
+  --line-soft: rgba(0,255,65,.09);
+  --accent:    #00ff41;
+  --accent2:   #00cc88;
+  --ok:        #00ff41;
+  --warn:      #ff3300;
+  --glow:      rgba(0,255,65,.4);
+  --glow2:     rgba(0,255,65,.12);
+  --r:         3px;
+  --font-body: 'JetBrains Mono', 'Courier New', monospace;
+  --mono:      'JetBrains Mono', 'Courier New', monospace;
+  --border-w:  .5px;
+  color-scheme: dark;
+}
+
+/* ── BLOOM (Vibrant Pink/Violet) ─────────────── */
+:root[data-theme="prism"] {
+  --bg:        #fff0f8;
+  --bg2:       #ffe4f2;
+  --surface:   #ffffff;
+  --surface2:  #fde8f4;
+  --surface3:  #fbd4ec;
+  --ink:       #1a0820;
+  --ink-dim:   rgba(26,8,32,.62);
+  --ink-faint: rgba(26,8,32,.3);
+  --ink-ghost: rgba(26,8,32,.07);
+  --line:      rgba(220,80,160,.2);
+  --line-soft: rgba(220,80,160,.1);
+  --accent:    #e0198c;
+  --accent2:   #8b2be2;
+  --ok:        #00a86b;
+  --warn:      #e53935;
+  --glow:      rgba(224,25,140,.3);
+  --glow2:     rgba(224,25,140,.1);
   --r:         10px;
-  --font-body: 'IBM Plex Sans', sans-serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
   --border-w:  .5px;
   color-scheme: light;
 }
 
-/* ── PRISM (Light · Indigo) ─────────────────── */
-:root[data-theme="prism"] {
-  --bg:        #f0f0f8;
-  --bg2:       #e8e8f4;
-  --surface:   #eaeaf6;
-  --surface2:  #e0e0f0;
-  --surface3:  #d6d6ea;
-  --ink:       #18182e;
-  --ink-dim:   rgba(24,24,46,.6);
-  --ink-faint: rgba(24,24,46,.3);
-  --ink-ghost: rgba(24,24,46,.07);
-  --line:      rgba(80,80,200,.18);
-  --line-soft: rgba(80,80,200,.09);
-  --accent:    #5b5bd6;
-  --accent2:   #d946ef;
-  --ok:        #0d9488;
-  --warn:      #dc2626;
-  --glow:      rgba(91,91,214,.3);
-  --glow2:     rgba(91,91,214,.1);
-  --r:         8px;
-  --font-body: 'Inter', -apple-system, sans-serif;
-  --border-w:  .5px;
-  color-scheme: light;
+/* ════════════════════════════════════════════════
+   THEME TEXTURES (applied to .app-grid)
+   ════════════════════════════════════════════════ */
+/* VOID — subtle dot grid */
+:root .app-grid {
+  background-image: radial-gradient(circle, rgba(180,77,255,.12) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+/* EMBER — ember radial glow at bottom */
+:root[data-theme="orbit"] .app-grid {
+  background-image: radial-gradient(ellipse 100% 50% at 50% 100%, rgba(255,107,26,.1) 0%, transparent 65%);
+  background-size: auto;
+}
+/* ARCTIC — subtle blue grid lines */
+:root[data-theme="brutal"] .app-grid {
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,120,255,.06) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,120,255,.06) 40px);
+  background-size: auto;
+}
+/* MATRIX — vertical scan lines */
+:root[data-theme="liquid"] .app-grid {
+  background-image: repeating-linear-gradient(90deg, rgba(0,255,65,.04) 0px, rgba(0,255,65,.04) 1px, transparent 1px, transparent 32px);
+  background-size: auto;
+}
+/* BLOOM — radial gradient blobs */
+:root[data-theme="prism"] .app-grid {
+  background-image:
+    radial-gradient(ellipse 60% 60% at 80% 20%, rgba(255,100,180,.12) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 20% 80%, rgba(150,80,255,.1) 0%, transparent 60%);
+  background-size: auto;
 }
 
 /* ════════════════════════════════════════════════
@@ -341,6 +375,21 @@ html, body, #root {
   flex-shrink: 0;
 }
 .new-session-btn:hover { background: var(--glow2); }
+
+.clear-sel-btn {
+  background: transparent;
+  border: var(--border-w) solid var(--warn);
+  color: var(--warn);
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .1em;
+  padding: 2px 7px;
+  border-radius: var(--r);
+  cursor: pointer;
+  opacity: .7;
+  transition: opacity var(--trans);
+}
+.clear-sel-btn:hover { opacity: 1; }
 
 .search-wrap {
   padding: 7px 10px;
@@ -1343,9 +1392,8 @@ html, body, #root {
   border-bottom: 0;
   border-radius: var(--r) var(--r) 0 0;
 }
-:root[data-theme="brutal"] .code-block-head { background: #000; border-color: #000; }
-:root[data-theme="orbit"] .code-block-head,
-:root[data-theme="liquid"] .code-block-head,
+/* light themes get softer code block headers */
+:root[data-theme="brutal"] .code-block-head { background: #e8f0ff; border-color: rgba(0,100,255,.2); }
 :root[data-theme="prism"] .code-block-head { background: rgba(0,0,0,.07); }
 
 .code-block-head .lang {
@@ -1381,9 +1429,8 @@ pre.code-block {
   font-size: 12.5px !important;
   line-height: 1.6 !important;
 }
-:root[data-theme="brutal"] pre.code-block { background: #111 !important; border-color: #000 !important; }
-:root[data-theme="orbit"] pre.code-block,
-:root[data-theme="liquid"] pre.code-block,
+/* light theme code blocks */
+:root[data-theme="brutal"] pre.code-block { background: #0a1628 !important; border-color: rgba(0,100,255,.3) !important; }
 :root[data-theme="prism"] pre.code-block { background: rgba(0,0,0,.06) !important; }
 
 .prose-ai { color: var(--ink); line-height: 1.68; font-size: 13.5px; }
@@ -1465,35 +1512,36 @@ pre.code-block {
    THEME-SPECIFIC OVERRIDES
    ════════════════════════════════════════════════ */
 
-/* ORBIT: pill bubbles */
+/* EMBER: fire border accents */
 :root[data-theme="orbit"] .msg-body {
-  border-radius: 18px 18px 18px 4px;
-  border-style: solid;
+  border-color: rgba(255,107,26,.2);
 }
 :root[data-theme="orbit"] .msg.user .msg-body {
-  border-radius: 18px 18px 4px 18px;
-  border-style: solid;
-  border-color: var(--line);
   background: var(--surface2);
-  color: var(--ink);
-}
-:root[data-theme="orbit"] .composer-frame {
-  border-radius: 20px;
-}
-:root[data-theme="orbit"] .composer-input {
-  border-radius: 20px;
+  border-color: rgba(255,107,26,.3);
 }
 
-/* BRUTAL: thick borders, no glow */
-:root[data-theme="brutal"] .engine-slider::-webkit-slider-thumb { box-shadow: none; background: #000; }
-:root[data-theme="brutal"] .param-slider::-webkit-slider-thumb { box-shadow: none; background: #000; }
-:root[data-theme="brutal"] .transmit-btn:hover { box-shadow: none; }
-:root[data-theme="brutal"] .session-item.active::before { box-shadow: none; }
-:root[data-theme="brutal"] .status-dot { box-shadow: none; }
+/* ARCTIC: blue-tinted shadows, clean borders */
+:root[data-theme="brutal"] .engine-slider::-webkit-slider-thumb { background: var(--accent); }
+:root[data-theme="brutal"] .param-slider::-webkit-slider-thumb { background: var(--accent); }
+:root[data-theme="brutal"] .transmit-btn:hover { box-shadow: 0 0 12px var(--glow); }
+:root[data-theme="brutal"] .msg-body {
+  box-shadow: 0 1px 4px rgba(0,102,255,.08);
+}
 
-/* LIQUID: warmer shadows */
+/* MATRIX: terminal scan-line border */
 :root[data-theme="liquid"] .msg-body {
-  box-shadow: 1px 2px 8px rgba(44,24,16,.06);
+  border-color: rgba(0,255,65,.15);
+  box-shadow: 0 0 8px rgba(0,255,65,.05);
+}
+
+/* BLOOM: soft pink shadows */
+:root[data-theme="prism"] .msg-body {
+  box-shadow: 0 2px 10px rgba(224,25,140,.08);
+}
+:root[data-theme="prism"] .msg.user .msg-body {
+  background: var(--surface2);
+  border-color: rgba(220,80,160,.2);
 }
 
 /* ════════════════════════════════════════════════

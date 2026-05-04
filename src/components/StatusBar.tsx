@@ -2,11 +2,11 @@ import { useState, useRef, useEffect } from 'react'
 import { useAppStore, type Theme } from '@/store/appStore'
 
 const THEMES: { id: Theme; label: string; accent: string }[] = [
-  { id: 'cad',    label: 'CAD',    accent: '#5eb8ff' },
-  { id: 'orbit',  label: 'ORBIT',  accent: '#d95f2b' },
-  { id: 'brutal', label: 'BRUTAL', accent: '#000000' },
-  { id: 'liquid', label: 'LIQUID', accent: '#8b3a0f' },
-  { id: 'prism',  label: 'PRISM',  accent: '#5b5bd6' },
+  { id: 'cad',    label: 'VOID',   accent: '#b44dff' },
+  { id: 'orbit',  label: 'EMBER',  accent: '#ff6b1a' },
+  { id: 'brutal', label: 'ARCTIC', accent: '#0066ff' },
+  { id: 'liquid', label: 'MATRIX', accent: '#00ff41' },
+  { id: 'prism',  label: 'BLOOM',  accent: '#e0198c' },
 ]
 
 export default function StatusBar() {

@@ -290,11 +290,7 @@ export const useAppStore = create<AppState>()(
 
       toggleModel: (id) => set((s) => {
         const already = s.selectedModels.includes(id)
-        if (already) {
-          return { selectedModels: s.selectedModels.filter(m => m !== id) }
-        }
-        // Single model selected → switch to new one instead of accumulating
-        if (s.selectedModels.length === 1) return { selectedModels: [id] }
+        if (already) return { selectedModels: s.selectedModels.filter(m => m !== id) }
         if (s.selectedModels.length >= 5) return s
         return { selectedModels: [...s.selectedModels, id] }
       }),

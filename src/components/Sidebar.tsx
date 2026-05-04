@@ -16,7 +16,7 @@ interface Props {
 }
 
 export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConversation, onDuplicateConversation, onClearConversation }: Props) {
-  const { conversations, activeConversationId, selectedModels, toggleModel, mode, messages, updateConversationTitle } = useAppStore()
+  const { conversations, activeConversationId, selectedModels, toggleModel, setSelectedModels, mode, messages, updateConversationTitle } = useAppStore()
   const authFetch = useAuthFetch()
   const [query, setQuery] = useState('')
   const [ctxMenu, setCtxMenu] = useState<{ id: string; x: number; y: number } | null>(null)
@@ -61,6 +61,9 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
             <h2>Models</h2>
             {blend && (
               <span className="engine-count" style={{ color: 'var(--ok)' }}>BLEND ×{selectedModels.length}</span>
+            )}
+            {selectedModels.length > 0 && (
+              <button className="clear-sel-btn" onClick={() => setSelectedModels([])}>✕ Clear</button>
             )}
           </div>
 

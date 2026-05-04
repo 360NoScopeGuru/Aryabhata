@@ -207,6 +207,7 @@ interface AppState {
   removePrompt: (id: string) => void
   truncateMessagesFrom: (convId: string, index: number) => void
   updateMessageContent: (convId: string, msgId: string, content: string) => void
+  clearMessages: (convId: string) => void
 }
 
 export function getActiveModel(selectedModels: string[]): string {
@@ -335,6 +336,9 @@ export const useAppStore = create<AppState>()(
           ...s.messages,
           [convId]: (s.messages[convId] ?? []).map(m => m.id === msgId ? { ...m, content } : m),
         },
+      })),
+      clearMessages: (convId) => set((s) => ({
+        messages: { ...s.messages, [convId]: [] },
       })),
     }),
     {

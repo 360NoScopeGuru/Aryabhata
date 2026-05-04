@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react'
 import { useAppStore, type Conversation } from '@/store/appStore'
 import { useAuthFetch } from '@/hooks/useAuthFetch'
+import { exportConversation } from '@/lib/exportConversation'
 import TopBar from '@/components/TopBar'
 import Sidebar from '@/components/Sidebar'
 import RightRail from '@/components/RightRail'
@@ -46,7 +47,7 @@ const RegMark = ({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) => {
 }
 
 export default function App() {
-  const { mode, setMode, activeConversationId, setActiveConversation, addConversation, removeConversation, setConversations, theme, conversations, messages } = useAppStore()
+  const { mode, setMode, activeConversationId, setActiveConversation, addConversation, removeConversation, setConversations, theme, conversations, messages, clearMessages } = useAppStore()
   const authFetch = useAuthFetch()
 
   useEffect(() => {
@@ -93,29 +94,31 @@ export default function App() {
     removeConversation(id)
   }, [authFetch])
 
-  const exportConversation = useCallback(() => {
+  const handleExportConversation = useCallback(() => {
     if (!activeConversationId) return
-    const conv = conversations.find(c => c.id === activeConversationId)
-    const msgs = messages[activeConversationId] ?? []
-    if (!conv || msgs.length === 0) return
-    const lines = [`# ${conv.title}\n`]
-    msgs.forEach(m => {
-      const role = m.role === 'user' ? '**You**' : `**Assistant** (${m.model ?? 'AI'})`
-      lines.push(`${role}\n\n${m.content}\n\n---\n`)
-    })
-    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `${conv.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
-    a.click()
-    URL.revokeObjectURL(a.href)
+    exportConversation(activeConversationId, conversations, messages)
   }, [activeConversationId, conversations, messages])
+
+  const handleDuplicateConversation = useCallback(async (conv: Conversation) => {
+    try {
+      const res = await authFetch(`/api/conversations/${conv.id}/duplicate`, { method: 'POST' })
+      if (!res.ok) throw new Error(`${res.status}`)
+      const newConv: Conversation = await res.json()
+      addConversation(newConv)
+      setActiveConversation(newConv.id)
+    } catch {}
+  }, [authFetch, addConversation, setActiveConversation])
+
+  const handleClearConversation = useCallback(async (id: string) => {
+    try { await authFetch(`/api/conversations/${id}/messages`, { method: 'DELETE' }) } catch {}
+    clearMessages(id)
+  }, [authFetch, clearMessages])
 
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'n') { e.preventDefault(); handleNewChat() }
-      if (e.ctrlKey && e.key === 'e') { e.preventDefault(); exportConversation() }
+      if (e.ctrlKey && e.key === 'e') { e.preventDefault(); handleExportConversation() }
       if (e.ctrlKey && e.key === 'k') {
         e.preventDefault()
         const el = document.getElementById('session-search') as HTMLInputElement | null
@@ -124,7 +127,7 @@ export default function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [handleNewChat, exportConversation])
+  }, [handleNewChat, handleExportConversation])
 
   const convId = activeConversationId
 
@@ -142,6 +145,8 @@ export default function App() {
         onNewChat={handleNewChat}
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={handleDeleteConversation}
+        onDuplicateConversation={handleDuplicateConversation}
+        onClearConversation={handleClearConversation}
       />
 
       {/* Center */}

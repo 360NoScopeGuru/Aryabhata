@@ -62,6 +62,42 @@ async def update_title(conv_id: str, body: dict, user_id: str = Depends(get_curr
     return {"ok": True}
 
 
+@router.delete("/{conv_id}/messages")
+async def clear_messages(conv_id: str, user_id: str = Depends(get_current_user)):
+    async with get_db() as db:
+        conv = await db.fetchone("SELECT id FROM conversations WHERE id=? AND user_id=?", (conv_id, user_id))
+        if not conv:
+            return {"ok": False}
+        await db.execute("DELETE FROM messages WHERE conversation_id=?", (conv_id,))
+    return {"ok": True}
+
+
+@router.post("/{conv_id}/duplicate")
+async def duplicate_conversation(conv_id: str, user_id: str = Depends(get_current_user)):
+    async with get_db() as db:
+        conv = await db.fetchone("SELECT * FROM conversations WHERE id=? AND user_id=?", (conv_id, user_id))
+        if not conv:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Not found")
+        new_id = str(uuid.uuid4())
+        new_title = conv["title"] + " (copy)"
+        await db.execute(
+            "INSERT INTO conversations (id, title, mode, model, user_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?)",
+            (new_id, new_title, conv["mode"], conv["model"], user_id, now(), now())
+        )
+        msgs = await db.fetchall(
+            "SELECT * FROM messages WHERE conversation_id=? ORDER BY created_at ASC",
+            (conv_id,)
+        )
+        for m in msgs:
+            await db.execute(
+                "INSERT INTO messages (id, conversation_id, role, content, mode, model, created_at) VALUES (?,?,?,?,?,?,?)",
+                (str(uuid.uuid4()), new_id, m["role"], m["content"], m["mode"], m["model"], m["created_at"])
+            )
+    return {"id": new_id, "title": new_title, "mode": conv["mode"], "model": conv["model"],
+            "created_at": now(), "updated_at": now()}
+
+
 @router.delete("/{conv_id}/messages/{msg_id}/onwards")
 async def delete_messages_onwards(conv_id: str, msg_id: str, user_id: str = Depends(get_current_user)):
     async with get_db() as db:

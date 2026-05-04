@@ -4,6 +4,7 @@ import rehypeHighlight from 'rehype-highlight'
 import { useState } from 'react'
 import type { Message } from '@/store/appStore'
 import { MIXING_MODELS } from '@/store/appStore'
+import ContextMenu from './ContextMenu'
 import 'highlight.js/styles/github-dark.css'
 
 interface Props {
@@ -51,6 +52,27 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
   const [traceOpen, setTraceOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState(message.content)
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
+
+  const openCtx = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setCtxMenu({ x: e.clientX, y: e.clientY })
+  }
+
+  const ctxItems = [
+    {
+      label: 'Copy text',
+      onSelect: () => navigator.clipboard.writeText(message.content),
+    },
+    ...(isUser && onEdit && !isStreaming ? [{
+      label: 'Edit',
+      onSelect: () => { setEditValue(message.content); setEditing(true) },
+    }] : []),
+    ...(isLast && !isUser && onRegenerate && !isStreaming ? [{
+      label: 'Regenerate',
+      onSelect: () => onRegenerate(),
+    }] : []),
+  ]
 
   const modelInfo = message.model ? MIXING_MODELS.find(m => m.id === message.model) : null
   const hasMetadata = !isUser && !isStreaming && (message.latency || message.ttft || message.outputTokens)
@@ -93,7 +115,7 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
   }
 
   return (
-    <div className={`msg fade-up ${isUser ? 'user' : ''}`}>
+    <div className={`msg fade-up ${isUser ? 'user' : ''}`} onContextMenu={openCtx}>
       <div className="msg-who">
         <span className="who-label">{isUser ? 'YOU' : 'ASST'}</span>
         <span className="who-time">{formatTime(message.created_at)}</span>
@@ -221,6 +243,15 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
             cost: message.cost,
           }, null, 2)}</pre>
         </div>
+      )}
+
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          items={ctxItems}
+          onClose={() => setCtxMenu(null)}
+        />
       )}
     </div>
   )

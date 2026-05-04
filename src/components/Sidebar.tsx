@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useAppStore, type Conversation, MIXING_MODELS, isBlendMode } from '@/store/appStore'
+import { useAuthFetch } from '@/hooks/useAuthFetch'
+import { exportConversation } from '@/lib/exportConversation'
 import { formatDate } from '@/lib/utils'
+import ContextMenu from './ContextMenu'
 
 const MODE_GLYPH: Record<string, string> = { chat: 'C', code: '{ }', image: '⬡' }
 
@@ -8,17 +11,46 @@ interface Props {
   onNewChat: () => void
   onSelectConversation: (c: Conversation) => void
   onDeleteConversation: (id: string) => void
+  onDuplicateConversation: (conv: Conversation) => void
+  onClearConversation: (id: string) => void
 }
 
-export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConversation }: Props) {
-  const { conversations, activeConversationId, selectedModels, toggleModel, mode } = useAppStore()
+export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConversation, onDuplicateConversation, onClearConversation }: Props) {
+  const { conversations, activeConversationId, selectedModels, toggleModel, mode, messages, updateConversationTitle } = useAppStore()
+  const authFetch = useAuthFetch()
   const [query, setQuery] = useState('')
+  const [ctxMenu, setCtxMenu] = useState<{ id: string; x: number; y: number } | null>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const renameInputRef = useRef<HTMLInputElement>(null)
 
   const blend = isBlendMode(selectedModels)
 
   const filtered = query.trim()
     ? conversations.filter(c => c.title.toLowerCase().includes(query.toLowerCase()))
     : conversations
+
+  const commitRename = async (id: string, value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) { setRenamingId(null); return }
+    updateConversationTitle(id, trimmed)
+    setRenamingId(null)
+    try {
+      await authFetch(`/api/conversations/${id}/title`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: trimmed }),
+      })
+    } catch {}
+  }
+
+  const openCtx = (e: React.MouseEvent, id: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setCtxMenu({ id, x: e.clientX, y: e.clientY })
+  }
+
+  const ctxConv = ctxMenu ? conversations.find(c => c.id === ctxMenu.id) : null
 
   return (
     <aside className="rail-left">
@@ -105,11 +137,28 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
           <div
             key={conv.id}
             className={`session-item ${activeConversationId === conv.id ? 'active' : ''}`}
-            onClick={() => onSelectConversation(conv)}
+            onClick={() => renamingId !== conv.id && onSelectConversation(conv)}
+            onContextMenu={e => openCtx(e, conv.id)}
           >
             <div className={`session-glyph ${conv.mode}`}>{MODE_GLYPH[conv.mode]}</div>
             <div className="session-info">
-              <div className="session-title">{conv.title}</div>
+              {renamingId === conv.id ? (
+                <input
+                  ref={renameInputRef}
+                  className="session-rename-input"
+                  value={renameValue}
+                  onChange={e => setRenameValue(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') commitRename(conv.id, renameValue)
+                    if (e.key === 'Escape') setRenamingId(null)
+                  }}
+                  onBlur={() => commitRename(conv.id, renameValue)}
+                  onClick={e => e.stopPropagation()}
+                  autoFocus
+                />
+              ) : (
+                <div className="session-title">{conv.title}</div>
+              )}
               <div className="session-meta">{formatDate(conv.updated_at)}</div>
             </div>
             <button
@@ -120,6 +169,56 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
           </div>
         ))}
       </div>
+
+      {ctxMenu && ctxConv && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
+          items={[
+            {
+              label: 'Rename',
+              shortcut: 'F2',
+              onSelect: () => {
+                setRenamingId(ctxConv.id)
+                setRenameValue(ctxConv.title)
+                setCtxMenu(null)
+              },
+            },
+            {
+              label: 'Duplicate',
+              onSelect: () => {
+                onDuplicateConversation(ctxConv)
+                setCtxMenu(null)
+              },
+            },
+            {
+              label: 'Export as Markdown',
+              shortcut: 'Ctrl+E',
+              onSelect: () => {
+                exportConversation(ctxConv.id, conversations, messages)
+                setCtxMenu(null)
+              },
+            },
+            { label: '', separator: true, onSelect: () => {} },
+            {
+              label: 'Clear History',
+              onSelect: () => {
+                onClearConversation(ctxConv.id)
+                setCtxMenu(null)
+              },
+            },
+            {
+              label: 'Delete',
+              danger: true,
+              onSelect: () => {
+                onDeleteConversation(ctxConv.id)
+                setCtxMenu(null)
+              },
+            },
+          ]}
+        />
+      )}
     </aside>
   )
 }

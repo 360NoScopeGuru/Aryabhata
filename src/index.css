@@ -1814,3 +1814,56 @@ pre.code-block {
   flex-shrink: 0;
 }
 .pl-delete-btn:hover { color: var(--warn); }
+
+/* ── Context Menu ──────────────────────────────────────────────── */
+.ctx-menu {
+  background: var(--bg);
+  border: var(--border-w) solid var(--line-soft);
+  border-radius: var(--r);
+  padding: 4px 0;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.45);
+  z-index: 9999;
+  font-family: var(--mono);
+  animation: ctx-in 80ms ease;
+}
+@keyframes ctx-in {
+  from { opacity: 0; transform: scale(.97) translateY(-3px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.ctx-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 14px;
+  font-size: 11px;
+  letter-spacing: .06em;
+  color: var(--ink-dim);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  transition: background var(--trans), color var(--trans);
+}
+.ctx-item:hover, .ctx-item[data-highlighted] {
+  background: var(--surface);
+  color: var(--ink);
+}
+.ctx-item[data-disabled] { opacity: .35; pointer-events: none; }
+.ctx-item-danger { color: var(--warn); }
+.ctx-item-danger:hover, .ctx-item-danger[data-highlighted] { background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--warn); }
+.ctx-sep { height: var(--border-w); background: var(--line-soft); margin: 4px 0; }
+.ctx-shortcut { font-size: 9px; letter-spacing: .1em; opacity: .45; margin-left: 16px; }
+
+/* Rename input inside session item */
+.session-rename-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: var(--border-w) solid var(--accent);
+  outline: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink);
+  padding: 0 2px;
+  min-width: 0;
+}

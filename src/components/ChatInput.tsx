@@ -74,10 +74,11 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
     setSaving(false)
   }
 
-  const canSend = (value.trim() || pastedImage) && !disabled && !streaming
+  const noModel = mode !== 'image' && selectedModels.length === 0
+  const canSend = (value.trim() || pastedImage) && !disabled && !streaming && !noModel
   const blend = isBlendMode(selectedModels)
   const activeModelId = mode !== 'image' ? getActiveModel(selectedModels) : null
-  const activeModel = activeModelId ? MIXING_MODELS.find(m => m.id === activeModelId) : null
+  const activeModel = activeModelId && !noModel ? MIXING_MODELS.find(m => m.id === activeModelId) : null
   const estimatedTokens = Math.ceil(value.length / 4)
 
   return (
@@ -169,8 +170,8 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
           onChange={e => setValue(e.target.value)}
           onKeyDown={handleKey}
           onPaste={handlePaste}
-          placeholder={placeholder ?? 'Transmit a message…'}
-          disabled={disabled || streaming}
+          placeholder={noModel ? 'Select a model in the sidebar first…' : (placeholder ?? 'Transmit a message…')}
+          disabled={disabled || streaming || noModel}
           rows={1}
         />
 

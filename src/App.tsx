@@ -1,5 +1,5 @@
-import { useEffect, useCallback } from 'react'
-import { useAppStore, type Conversation } from '@/store/appStore'
+import { useEffect, useCallback, useState } from 'react'
+import { useAppStore, type Conversation, MIXING_MODELS } from '@/store/appStore'
 import { useAuthFetch } from '@/hooks/useAuthFetch'
 import { exportConversation } from '@/lib/exportConversation'
 import TopBar from '@/components/TopBar'
@@ -10,6 +10,25 @@ import CodeMode from '@/components/CodeMode'
 import ImageMode from '@/components/ImageMode'
 import StatusBar from '@/components/StatusBar'
 import { v4 as uuid } from 'uuid'
+
+function ModelToast({ modelIds, onAccept, onDismiss }: { modelIds: string[]; onAccept: () => void; onDismiss: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 8000)
+    return () => clearTimeout(t)
+  }, [onDismiss])
+
+  const label = modelIds.length === 1
+    ? (MIXING_MODELS.find(m => m.id === modelIds[0])?.label ?? modelIds[0])
+    : `${modelIds.length} models (Blend)`
+
+  return (
+    <div className="model-toast">
+      <span>Resume with <strong style={{ color: 'var(--ink)' }}>{label}</strong>?</span>
+      <button className="model-toast-accept" onClick={onAccept}>Use it</button>
+      <button className="model-toast-dismiss" onClick={onDismiss}>×</button>
+    </div>
+  )
+}
 
 const MODE_LABELS: Record<string, string> = {
   chat: 'New Chat',
@@ -47,8 +66,9 @@ const RegMark = ({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) => {
 }
 
 export default function App() {
-  const { mode, setMode, activeConversationId, setActiveConversation, addConversation, removeConversation, setConversations, theme, conversations, messages, clearMessages } = useAppStore()
+  const { mode, setMode, activeConversationId, setActiveConversation, addConversation, removeConversation, setConversations, theme, conversations, messages, clearMessages, selectedModels, setSelectedModels } = useAppStore()
   const authFetch = useAuthFetch()
+  const [pendingModels, setPendingModels] = useState<string[] | null>(null)
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -62,6 +82,10 @@ export default function App() {
   }, [authFetch])
 
   const handleNewChat = useCallback(async () => {
+    if (selectedModels.length > 0) {
+      setPendingModels(selectedModels)
+      setSelectedModels([])
+    }
     const title = MODE_LABELS[mode]
     try {
       const res = await authFetch('/api/conversations', {
@@ -82,7 +106,7 @@ export default function App() {
       addConversation(conv)
       setActiveConversation(conv.id)
     }
-  }, [mode, authFetch])
+  }, [mode, authFetch, selectedModels, setSelectedModels])
 
   const handleSelectConversation = useCallback((c: Conversation) => {
     setActiveConversation(c.id)
@@ -191,6 +215,15 @@ export default function App() {
       <RightRail />
 
       <StatusBar />
+
+      {/* Model resume toast */}
+      {pendingModels && pendingModels.length > 0 && (
+        <ModelToast
+          modelIds={pendingModels}
+          onAccept={() => { setSelectedModels(pendingModels); setPendingModels(null) }}
+          onDismiss={() => setPendingModels(null)}
+        />
+      )}
     </div>
   )
 }

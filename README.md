@@ -1,73 +1,563 @@
-# React + TypeScript + Vite
+<div align="center">
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+  ▄▄▄       ██▀███ ▓██   ██▓ ▄▄▄       ██▄▄▄  ██░ ██  ▄▄▄     ▄▄▄█████▓ ▄▄▄
+ ▒████▄    ▓██ ▒ ██▒▒██  ██▒▒████▄    ▒████▄ ▓██░ ██▒▒████▄   ▓  ██▒ ▓▒▒████▄
+ ▒██  ▀█▄  ▓██ ░▄█ ▒ ▒██ ██░▒██  ▀█▄  ▒██  ▀█▄▒██▀▀██░▒██  ▀█▄ ▒ ▓██░ ▒░▒██  ▀█▄
+ ░██▄▄▄▄██ ▒██▀▀█▄   ░ ▐██▓░░██▄▄▄▄██░██▄▄▄▄██░▓█ ░██ ░██▄▄▄▄██░ ▓██▓ ░ ░██▄▄▄▄██
+  ▓█   ▓██▒░██▓ ▒██▒ ░ ██▒▓░ ▓█   ▓██▒▓█   ▓██▒░▓█▒░██▓ ▓█   ▓██▒ ▒██▒ ░  ▓█   ▓██▒
+  ▒▒   ▓▒█░░ ▒▓ ░▒▓░  ██▒▒▒  ▒▒   ▓▒█░▒▒   ▓▒█░ ▒ ░░▒░▒ ▒▒   ▓▒█░ ▒ ░░    ▒▒   ▓▒█░
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+# Aryabhata · LLM Instrument
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+**A multi-model AI studio with streaming inference, Blend mode, code editing, image generation, and per-user persistence — built on NVIDIA NIM.**
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-aryabhata--rkfm.onrender.com-5eb8ff?style=for-the-badge&logo=render&logoColor=white)](https://aryabhata-rkfm.onrender.com)
+[![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react)](https://react.dev)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
+[![Neon](https://img.shields.io/badge/Database-Neon%20Postgres-00e699?style=flat-square)](https://neon.tech)
+[![Clerk](https://img.shields.io/badge/Auth-Clerk-6c47ff?style=flat-square)](https://clerk.com)
+
+</div>
+
+---
+
+## Overview
+
+Aryabhata (named after the 5th-century Indian mathematician) is a full-stack AI chat studio that gives you direct access to 40+ open-weight language models hosted on the NVIDIA NIM inference platform. It is designed to feel like a precision instrument — a minimal, telemetry-rich interface that stays out of your way while you work.
+
+Every conversation is persisted to a cloud Postgres database, scoped to the authenticated user. Sessions survive page refreshes, device switches, and deployments. The app streams all responses token-by-token over Server-Sent Events and surfaces timing metrics (TTFT, tokens/s, latency) per message.
+
+### Key ideas
+
+| Idea | What it means |
+|------|---------------|
+| **Blend Mode** | Send one prompt to 2–5 models simultaneously; responses stream in side-by-side within the same thread |
+| **Auto-Route** | An LLM classifier transparently decides whether your prompt should go to Chat, Code, or Image mode |
+| **Instrument UI** | 5 design themes, live sparkline telemetry, and a status bar modeled after an engineering HUD |
+| **Per-user isolation** | Multi-tenant Postgres — every session, message, and setting belongs to the signed-in user |
+
+---
+
+## Live Demo
+
+> **[https://aryabhata-rkfm.onrender.com](https://aryabhata-rkfm.onrender.com)**
+
+Sign up with email or OAuth via Clerk. No credit card required.
+
+---
+
+## Features
+
+### Modes
+
+#### Chat Mode
+Full conversational AI with streaming. Supports image paste (drop a screenshot into the composer — vision-capable models will analyze it). Responses render in rich Markdown with fenced code blocks, tables, and syntax highlighting powered by highlight.js.
+
+- **Regenerate** — re-stream the last response with one click, or right-click → Regenerate
+- **Edit & Resend** — click any past user message to edit it inline; all subsequent messages are truncated and the thread re-streams from that point
+- **Auto-naming** — the conversation title is automatically generated by an Llama 3.1 8B classifier after the first exchange
+
+#### Code Mode
+A Monaco editor (the same engine as VS Code) fills the left half of the screen; an AI assistant streams into the right panel. The editor supports 20+ languages with bracket colorization, word-wrap, and folding. Ask the model to explain, refactor, debug, or extend whatever is in the editor.
+
+#### Image Mode
+Generate images from text prompts using Stability AI and Black Forest Labs models hosted on NVIDIA NIM. Choose resolution, step count, and model. Generated images display inline with a one-click Save button.
+
+#### Blend Mode
+Select 2–5 models from the sidebar. When you send a message, each model streams its response as a separate assistant bubble in the same thread — with each response attributed to its model. Blend mode is useful for comparing quality, creative variance, or reasoning style on the same prompt.
+
+---
+
+### Models
+
+Aryabhata provides access to **40 language models** and **6 image models** via [NVIDIA NIM](https://build.nvidia.com).
+
+#### Language Models
+
+| Provider | Models |
+|----------|--------|
+| **Meta** | Llama 3.1 8B · 70B · 405B, Llama 3.2 3B · 11B Vision · 90B Vision, Llama 3.3 70B, Llama 4 Scout · Maverick |
+| **Mistral** | Mistral 7B · Nemo 12B · 675B, Mixtral 8×7B · 8×22B, Codestral 22B |
+| **Google** | Gemma 2 9B · 27B, Gemma 3 12B · 27B, CodeGemma 7B |
+| **Microsoft** | Phi-3 Mini · Medium, Phi-3.5 Mini, Phi-4 |
+| **Qwen** | Qwen 2.5 7B · 72B, QwQ 32B |
+| **DeepSeek** | DeepSeek R1 7B (distill) · 70B (distill) · Full, DeepSeek V3 |
+| **NVIDIA** | Nemotron Nano 8B, Nemotron 70B, Nemotron Super 49B |
+| **Cohere** | Command R, Command R+ |
+| **IBM** | Granite 3.0 8B, Granite 34B Code |
+
+#### Image Models
+
+| Model | Badge |
+|-------|-------|
+| FLUX.1 Schnell | Fast |
+| FLUX.1 Dev | HD |
+| Stable Diffusion XL | Pro |
+| SD3 Medium | SD3 |
+| SD3.5 Large | Best |
+| SD3.5 Large Turbo | Fast |
+
+---
+
+### Inference & Streaming
+
+All language model requests stream over **Server-Sent Events (SSE)**. The frontend hooks into the stream with a custom `useStream` hook that:
+
+1. Measures **Time to First Token (TTFT)** on the first `delta` event
+2. Accumulates output token count and computes **tokens per second** (T/s) at stream end
+3. Writes per-message telemetry (TTFT, T/s, latency, output tokens, finish reason) into a collapsible TRACE panel under each assistant message
+
+The status bar at the bottom of the screen shows a live **sparkline** of the last 20 T/s readings, plus current TTFT and streaming state.
+
+---
+
+### Sampling Controls
+
+The right rail exposes full sampling parameter control:
+
+| Parameter | Range | Presets |
+|-----------|-------|---------|
+| Temperature | 0.0 – 2.0 | Precise (0.1) · Balanced (0.7) · Creative (1.2) · Forensic (0.3) |
+| Top-P | 0.0 – 1.0 | — |
+| Top-K | 1 – 200 | — |
+| Frequency Penalty | 0.0 – 2.0 | — |
+| Presence Penalty | 0.0 – 2.0 | — |
+| Max Tokens | 256 – 16384 | — |
+
+All parameters are persisted to localStorage and survive page refresh.
+
+---
+
+### System Prompt
+
+A global system prompt can be set in the right rail. It is prepended to every request across all three modes and persists in localStorage.
+
+---
+
+### Context Menus
+
+Right-click anywhere for contextual actions:
+
+**Sessions (sidebar)**
+- **Rename** — inline text input; saves on Enter or blur, calls `PATCH /conversations/{id}/title`
+- **Duplicate** — copies the conversation and all its messages; opens the duplicate immediately
+- **Export as Markdown** — downloads the full conversation as a `.md` file
+- **Clear History** — wipes all messages while keeping the session entry
+- **Delete** — permanently removes the session
+
+**Messages**
+- **Copy text** — copies raw message content to clipboard
+- **Edit** — (user messages only) opens inline editor; re-streams from that point on confirm
+- **Regenerate** — (last assistant message only) discards and re-streams
+
+---
+
+### Prompt Library
+
+Save frequently-used prompts from the composer. Click **⌘ Prompts** in the composer toolbar to open the library popover. Clicking a saved prompt inserts it into the textarea. Prompts persist in localStorage across sessions.
+
+---
+
+### Conversation Export
+
+Download any conversation as a formatted Markdown file. Triggered by:
+- Right-click a session → **Export as Markdown**
+- **Ctrl + E** (exports the active conversation)
+
+---
+
+### Themes
+
+Five visual themes, switchable from the top bar:
+
+| Theme | Style |
+|-------|-------|
+| **CAD** | Dark blueprint — deep navy, electric blue accent, monospace everything |
+| **Orbit** | Warm light — off-white, terracotta, very rounded corners |
+| **Brutal** | High-contrast black & white, zero border radius, stark typography |
+| **Liquid** | Warm parchment, terracotta accents, soft type |
+| **Prism** | Light indigo — clean, cool, soft purple tones |
+
+The active theme is persisted to localStorage.
+
+---
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + N` | Create a new session |
+| `Ctrl + K` | Focus the session search input |
+| `Ctrl + E` | Export the active conversation as Markdown |
+| `Enter` | Send message |
+| `Shift + Enter` | New line in composer |
+
+---
+
+### Authentication & Multi-User
+
+Authentication is handled by **Clerk**. Every API route on the backend requires a valid JWT, verified against Clerk's JWKS endpoint using PyJWT + the `cryptography` library (RS256/RS512). All database queries are scoped by `user_id`, so users can only read and modify their own data.
+
+---
+
+## Architecture
+
 ```
+┌─────────────────────────────────────────────────────────────────┐
+│  Browser  (React 19 + Vite + TypeScript)                        │
+│                                                                 │
+│  ChatMode · CodeMode (Monaco) · ImageMode · Blend Mode          │
+│  Zustand store (conversations · messages · telemetry · prefs)   │
+│  useStream hook (SSE) · useAuthFetch (JWT injection)            │
+│  Clerk React (auth guard, token retrieval)                      │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │ HTTPS / SSE
+                                │ Authorization: Bearer <Clerk JWT>
+┌───────────────────────────────▼─────────────────────────────────┐
+│  FastAPI  (Python 3.12, uvicorn)                                 │
+│                                                                 │
+│  /api/chat/stream      SSE chat completion                       │
+│  /api/code/stream      SSE code completion                       │
+│  /api/blend/stream     Parallel SSE across N models             │
+│  /api/image/generate   Synchronous image generation             │
+│  /api/route            Prompt classifier (chat/code/image)       │
+│  /api/chat/name        Auto-title generator                      │
+│  /api/conversations/*  CRUD, duplicate, clear, delete-onwards   │
+│                                                                 │
+│  PyJWT + Clerk JWKS  →  RS256 token verification per request     │
+└─────────────────┬───────────────────────┬────────────────────────┘
+                  │                       │
+   ┌──────────────▼──────────┐  ┌─────────▼───────────────────────┐
+   │  Neon Postgres           │  │  NVIDIA NIM                      │
+   │  asyncpg · PgBouncer     │  │  integrate.api.nvidia.com/v1     │
+   │                          │  │  OpenAI-compatible REST API      │
+   │  conversations           │  │  40+ LLMs · 6 image models       │
+   │  messages                │  └──────────────────────────────────┘
+   └──────────────────────────┘
+```
+
+---
+
+## Tech Stack
+
+### Frontend
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| React | 19 | UI framework |
+| TypeScript | 6.0 | Type safety |
+| Vite | 8 | Build tool & dev server |
+| Zustand | 5 | Global state with localStorage persistence |
+| React Router | 7 | Client-side routing (required for Clerk's `routing="path"`) |
+| Clerk React | 5.61 | Authentication UI and JWT management |
+| Monaco Editor | 4.7 | VS Code editor engine for Code Mode |
+| react-markdown | 10 | Markdown rendering in chat |
+| remark-gfm | 4 | GFM tables, strikethrough, task lists |
+| rehype-highlight | 7 | Syntax highlighting via highlight.js |
+| Radix UI | various | Accessible primitives (dropdown, dialog, tabs, tooltip…) |
+| Framer Motion | 12 | Animations |
+| Tailwind CSS | 4 | Utility CSS |
+| date-fns | 4 | Date formatting in session list |
+| uuid | 14 | Client-side ID generation |
+
+### Backend
+
+| Package | Purpose |
+|---------|---------|
+| FastAPI | API framework |
+| uvicorn[standard] | ASGI server |
+| asyncpg | Async Postgres driver |
+| openai | NVIDIA NIM client (OpenAI-compatible) |
+| PyJWT + cryptography | Clerk JWT verification (RS256) |
+| python-dotenv | Environment variable loading |
+| aiofiles | Async static file serving |
+
+### Infrastructure
+
+| Service | Role |
+|---------|------|
+| **Render** | Hosting — one web service runs both the FastAPI backend and serves the built Vite SPA |
+| **Neon** | Serverless Postgres with PgBouncer pooling (`statement_cache_size=0` required) |
+| **Clerk** | Authentication, JWKS endpoint, user management dashboard |
+| **NVIDIA NIM** | LLM and image inference at scale |
+
+---
+
+## Database Schema
+
+```sql
+CREATE TABLE conversations (
+    id          TEXT PRIMARY KEY,
+    title       TEXT NOT NULL,
+    mode        TEXT NOT NULL DEFAULT 'chat',   -- 'chat' | 'code' | 'image'
+    model       TEXT,
+    user_id     TEXT NOT NULL DEFAULT '',        -- Clerk user ID
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+
+CREATE TABLE messages (
+    id                  TEXT PRIMARY KEY,
+    conversation_id     TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    role                TEXT NOT NULL,           -- 'user' | 'assistant'
+    content             TEXT NOT NULL,
+    mode                TEXT NOT NULL DEFAULT 'chat',
+    model               TEXT,
+    image_url           TEXT,                    -- populated for image generation responses
+    created_at          TEXT NOT NULL
+);
+```
+
+---
+
+## Local Development
+
+### Prerequisites
+
+- Node.js 20+
+- Python 3.12+
+- A [Neon](https://neon.tech) Postgres database (free tier works)
+- A [Clerk](https://clerk.com) application (free tier works)
+- An [NVIDIA NIM](https://build.nvidia.com) API key
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/360NoScopeGuru/Aryabhata.git
+cd Aryabhata
+npm install
+```
+
+### 2. Backend setup
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 3. Environment variables
+
+**`backend/.env`**
+
+```env
+# NVIDIA NIM — get a key at build.nvidia.com
+NVIDIA_API_KEY=nvapi-...
+NVIDIA_API_KEY_MISTRAL=nvapi-...   # optional; falls back to NVIDIA_API_KEY
+NVIDIA_API_KEY_CODE=nvapi-...      # optional; falls back to NVIDIA_API_KEY
+NVIDIA_API_KEY_ROUTER=nvapi-...    # used for auto-routing and conversation auto-naming
+
+# Neon Postgres — from your Neon project dashboard
+DATABASE_URL=postgresql://user:pass@host/dbname?sslmode=require
+
+# Clerk — from your Clerk dashboard → API Keys
+CLERK_JWKS_URL=https://your-clerk-domain.clerk.accounts.dev/.well-known/jwks.json
+```
+
+**`.env`** (project root, for Vite)
+
+```env
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+```
+
+### 4. Run
+
+```bash
+# Terminal 1 — backend
+cd backend && uvicorn main:app --reload --port 8000
+
+# Terminal 2 — frontend
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173). The Vite dev server proxies `/api/*` to port 8000 automatically.
+
+---
+
+## Deployment (Render)
+
+The app deploys as a **single Render web service**. FastAPI serves the Vite build from the `dist/` directory in production — no separate static hosting needed.
+
+### Build command
+
+```bash
+npm install && npm run build && pip install -r backend/requirements.txt
+```
+
+### Start command
+
+```bash
+cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+```
+
+### Environment variables on Render
+
+| Variable | Notes |
+|----------|-------|
+| `NVIDIA_API_KEY` | Primary NIM key |
+| `NVIDIA_API_KEY_MISTRAL` | Optional separate key for Mistral models |
+| `NVIDIA_API_KEY_CODE` | Optional separate key for large code models |
+| `NVIDIA_API_KEY_ROUTER` | Key for the Llama 3.1 8B routing / naming calls |
+| `DATABASE_URL` | Neon connection string |
+| `CLERK_JWKS_URL` | Clerk JWKS endpoint URL |
+| `VITE_CLERK_PUBLISHABLE_KEY` | **Must be a Build Arg**, not just an env var — Vite bakes it into the bundle at build time |
+
+---
+
+## API Reference
+
+All routes require `Authorization: Bearer <Clerk JWT>`.
+
+### Chat
+
+| Method | Route | Body | Description |
+|--------|-------|------|-------------|
+| `POST` | `/api/chat/stream` | `ChatRequest` | Stream a chat completion (SSE) |
+| `POST` | `/api/chat/name` | `{ conversation_id, first_message }` | Auto-generate a conversation title |
+| `POST` | `/api/route` | `{ prompt }` | Classify a prompt → `chat` / `code` / `image` |
+
+### Code
+
+| Method | Route | Body | Description |
+|--------|-------|------|-------------|
+| `POST` | `/api/code/stream` | `CodeRequest` | Stream a code-focused completion (SSE) |
+
+### Blend
+
+| Method | Route | Body | Description |
+|--------|-------|------|-------------|
+| `POST` | `/api/blend/stream` | `BlendRequest` | Stream completions from multiple models concurrently (SSE) |
+
+### Image
+
+| Method | Route | Body | Description |
+|--------|-------|------|-------------|
+| `POST` | `/api/image/generate` | `ImageRequest` | Generate an image; returns `{ image_url }` |
+
+### Conversations
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/conversations` | List all conversations for the current user |
+| `POST` | `/api/conversations` | Create a new conversation |
+| `DELETE` | `/api/conversations/{id}` | Delete a conversation and all its messages |
+| `PATCH` | `/api/conversations/{id}/title` | Rename a conversation |
+| `POST` | `/api/conversations/{id}/duplicate` | Duplicate conversation + messages |
+| `GET` | `/api/conversations/{id}/messages` | Fetch all messages |
+| `DELETE` | `/api/conversations/{id}/messages` | Clear all messages (keep conversation) |
+| `DELETE` | `/api/conversations/{id}/messages/{msg_id}/onwards` | Delete a message and all following messages |
+
+### SSE Stream Format
+
+```
+data: {"delta": "token text"}
+
+data: {"model_start": "meta/llama-3.1-70b-instruct"}   ← Blend only
+data: {"model_done": true}                              ← Blend only
+
+data: {"done": true, "id": "msg-uuid", "output_tokens": 412}
+
+data: {"error": "something went wrong"}
+```
+
+---
+
+## Project Structure
+
+```
+Aryabhata/
+├── backend/
+│   ├── main.py                   # FastAPI app, CORS, SPA fallback
+│   ├── auth.py                   # Clerk JWT verification (PyJWT + JWKS retry)
+│   ├── database.py               # asyncpg pool, ? → $N placeholder shim
+│   ├── models.py                 # Pydantic request models
+│   ├── requirements.txt
+│   └── routes/
+│       ├── chat.py               # /chat/stream, /chat/name, /route
+│       ├── code.py               # /code/stream
+│       ├── blend.py              # /blend/stream (parallel multi-model SSE)
+│       ├── image.py              # /image/generate
+│       └── conversations.py      # CRUD, duplicate, clear, delete-onwards
+│
+├── src/
+│   ├── main.tsx                  # React entry: BrowserRouter + ClerkProvider + auth guard
+│   ├── App.tsx                   # Root layout, keyboard shortcuts, model toast
+│   ├── store/
+│   │   └── appStore.ts           # Zustand store (all state + actions, localStorage persist)
+│   ├── components/
+│   │   ├── TopBar.tsx            # Top nav, theme switcher, Clerk UserButton
+│   │   ├── Sidebar.tsx           # Model selector, session list, right-click context menu
+│   │   ├── RightRail.tsx         # Sampling controls, system prompt, live telemetry
+│   │   ├── StatusBar.tsx         # Sparkline, token counter, session meta
+│   │   ├── ChatMode.tsx          # Chat thread, regenerate, edit & resend
+│   │   ├── CodeMode.tsx          # Monaco editor + AI assistant split view
+│   │   ├── ImageMode.tsx         # Image generation UI
+│   │   ├── MessageBubble.tsx     # Message renderer (Markdown, telemetry, inline edit)
+│   │   ├── ChatInput.tsx         # Composer (token counter, prompt library, image paste)
+│   │   └── ContextMenu.tsx       # Radix DropdownMenu anchored to right-click cursor
+│   ├── hooks/
+│   │   ├── useAuthFetch.ts       # fetch() wrapper that injects Clerk Bearer token
+│   │   └── useStream.ts          # SSE streaming hook with TTFT / T/s callbacks
+│   ├── lib/
+│   │   ├── exportConversation.ts # Markdown export (used by sidebar + Ctrl+E)
+│   │   └── utils.ts              # Date formatting, misc helpers
+│   ├── pages/
+│   │   ├── SignInPage.tsx         # Clerk <SignIn routing="path"> with branded theme
+│   │   └── SignUpPage.tsx         # Clerk <SignUp routing="path"> with branded theme
+│   └── index.css                 # Design system: 5 themes, all component styles
+│
+├── index.html
+├── vite.config.ts
+├── tsconfig.json
+└── package.json
+```
+
+---
+
+## Design System
+
+The entire visual layer lives in `src/index.css` as CSS custom properties. Five themes are defined as `:root[data-theme="..."]` overrides. Switching theme sets `document.documentElement.dataset.theme` — all components rerender instantly with no JS theme context needed.
+
+Core variables:
+
+```css
+--bg          /* page background           */
+--surface     /* card / panel background   */
+--ink         /* primary text              */
+--ink-dim     /* secondary text            */
+--accent      /* primary action color      */
+--ok          /* success / green           */
+--warn        /* destructive / red         */
+--r           /* border-radius (CAD: 8px · Orbit: 18px · Brutal: 0px) */
+--mono        /* monospace font stack      */
+--border-w    /* border width (0.5px–1.5px) */
+--trans       /* transition shorthand      */
+```
+
+---
+
+## Contributing
+
+1. Fork the repo
+2. Create a feature branch: `git checkout -b feat/your-feature`
+3. Commit with a clear message
+4. Push and open a pull request
+
+Bug reports and feature requests are welcome via [GitHub Issues](https://github.com/360NoScopeGuru/Aryabhata/issues).
+
+---
+
+## License
+
+MIT © 2025 360NoScopeGuru
+
+---
+
+<div align="center">
+  <sub>Built with NVIDIA NIM · FastAPI · React 19 · Neon Postgres · Clerk</sub><br/><br/>
+  <sub>Named after <strong>Āryabhaṭa</strong> (476–550 CE) — mathematician, astronomer,<br/>and the first person to correctly explain Earth's axial rotation</sub>
+</div>

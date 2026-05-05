@@ -1,5 +1,16 @@
 <div align="center">
 
+```
+==========================================================================
+    _    ____   __   __    _    ____   _   _    _    _____   _
+   / \  |  _ \  \ \ / /  / \  | __ ) | | | |  / \  |_   _| / \
+  / _ \ | |_) |  \ V /  / _ \ |  _ \ | |_| | / _ \   | |  / _ \
+ / ___ \|  _ <    | |  / ___ \| |_) ||  _  |/ ___ \  | | / ___ \
+/_/   \_\_| \_\   |_| /_/   \_\____/ |_| |_/_/   \_\ |_|/_/   \_\
+==========================================================================
+                      L L M   *   I N S T R U M E N T
+```
+
 # Aryabhata · LLM Instrument
 
 **A multi-model AI studio with streaming inference, Blend mode, code editing, image generation, Arena voting, Persona Gallery, Prompt Enhancer, conversation forking, full mobile support, and per-user persistence — built on NVIDIA NIM.**

@@ -1572,6 +1572,59 @@ pre.code-block {
 }
 
 /* ════════════════════════════════════════════════
+   MODEL SEARCH + PROVIDER GROUPS
+   ════════════════════════════════════════════════ */
+.model-search-wrap {
+  padding: 8px 10px;
+  border-bottom: var(--border-w) solid var(--line-soft);
+  flex-shrink: 0;
+}
+.model-search-input {
+  width: 100%;
+  background: var(--surface);
+  border: var(--border-w) solid var(--line-soft);
+  border-radius: var(--r);
+  padding: 5px 9px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color var(--trans);
+}
+.model-search-input:focus { border-color: var(--line); }
+.model-search-input::placeholder { color: var(--ink-faint); }
+
+.provider-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px 4px;
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: var(--surface);
+  border-bottom: var(--border-w) solid var(--line-soft);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.provider-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.provider-count {
+  margin-left: auto;
+  font-size: 7.5px;
+  color: var(--ink-faint);
+  opacity: 0.7;
+}
+
+/* ════════════════════════════════════════════════
    MODEL CARDS (sidebar, replaces engine sliders)
    ════════════════════════════════════════════════ */
 .model-list {

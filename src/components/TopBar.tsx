@@ -12,6 +12,20 @@ function UTCClock() {
   return <>{time}</>
 }
 
+function LocalClock() {
+  const fmt = () => {
+    const d = new Date()
+    return [d.getHours(), d.getMinutes(), d.getSeconds()]
+      .map(n => String(n).padStart(2, '0')).join(':')
+  }
+  const [time, setTime] = useState(fmt)
+  useEffect(() => {
+    const id = setInterval(() => setTime(fmt()), 1000)
+    return () => clearInterval(id)
+  }, [])
+  return <>{time}</>
+}
+
 export default function TopBar() {
   const { conversations, activeConversationId, projectName, threadCount } = useAppStore()
   const activeConv = conversations.find(c => c.id === activeConversationId)
@@ -61,6 +75,10 @@ export default function TopBar() {
         <div className="meta-cell">
           <span className="k">UTC</span>
           <span className="v"><UTCClock /></span>
+        </div>
+        <div className="meta-cell">
+          <span className="k">LOCAL</span>
+          <span className="v"><LocalClock /></span>
         </div>
         <UserButton
           appearance={{

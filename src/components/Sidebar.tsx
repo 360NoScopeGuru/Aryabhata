@@ -1,11 +1,13 @@
 import { useState, useRef } from 'react'
-import { useAppStore, type Conversation, MIXING_MODELS, isBlendMode } from '@/store/appStore'
+import { useAppStore, type Conversation, type Mode, MIXING_MODELS, isBlendMode } from '@/store/appStore'
 import { useAuthFetch } from '@/hooks/useAuthFetch'
 import { exportConversation } from '@/lib/exportConversation'
 import { formatDate } from '@/lib/utils'
 import ContextMenu from './ContextMenu'
 
 const MODE_GLYPH: Record<string, string> = { chat: 'C', code: '{ }', image: '⬡' }
+
+const PROVIDER_ORDER = ['META', 'MISTRAL', 'GOOGLE', 'MICROSOFT', 'QWEN', 'DEEPSEEK', 'NVIDIA', 'COHERE', 'IBM']
 
 interface Props {
   onNewChat: () => void
@@ -16,15 +18,27 @@ interface Props {
 }
 
 export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConversation, onDuplicateConversation, onClearConversation }: Props) {
-  const { conversations, activeConversationId, selectedModels, toggleModel, setSelectedModels, mode, messages, updateConversationTitle } = useAppStore()
+  const { conversations, activeConversationId, selectedModels, toggleModel, setSelectedModels, mode, setMode, messages, updateConversationTitle } = useAppStore()
   const authFetch = useAuthFetch()
   const [query, setQuery] = useState('')
+  const [modelQuery, setModelQuery] = useState('')
   const [ctxMenu, setCtxMenu] = useState<{ id: string; x: number; y: number } | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const renameInputRef = useRef<HTMLInputElement>(null)
 
   const blend = isBlendMode(selectedModels)
+
+  const filteredModels = modelQuery.trim()
+    ? MIXING_MODELS.filter(m =>
+        m.label.toLowerCase().includes(modelQuery.toLowerCase()) ||
+        m.provider.toLowerCase().includes(modelQuery.toLowerCase())
+      )
+    : MIXING_MODELS
+
+  const providerGroups = PROVIDER_ORDER
+    .map(p => ({ provider: p, models: filteredModels.filter(m => m.provider === p), total: MIXING_MODELS.filter(m => m.provider === p).length }))
+    .filter(g => g.models.length > 0)
 
   const filtered = query.trim()
     ? conversations.filter(c => c.title.toLowerCase().includes(query.toLowerCase()))
@@ -54,6 +68,15 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
 
   return (
     <aside className="rail-left">
+      {/* Mode tabs */}
+      <div className="mode-tabs">
+        {([['chat', 'CHAT'], ['code', 'CODE'], ['image', 'IMAGE']] as [Mode, string][]).map(([id, label]) => (
+          <button key={id} className={`mode-tab ${mode === id ? 'active' : ''}`} onClick={() => setMode(id)}>
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Models section — visible for chat/code only */}
       {mode !== 'image' && (
         <>
@@ -67,35 +90,61 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
             )}
           </div>
 
+          <div className="model-search-wrap">
+            <input
+              className="model-search-input"
+              type="search"
+              placeholder="Search models…"
+              value={modelQuery}
+              onChange={e => setModelQuery(e.target.value)}
+            />
+          </div>
+
           <div className="model-list">
-            {MIXING_MODELS.map(model => {
-              const selected = selectedModels.includes(model.id)
-              return (
-                <div
-                  key={model.id}
-                  className={`model-card ${selected ? 'selected' : ''}`}
-                  onClick={() => toggleModel(model.id)}
-                >
-                  <div className="model-card-avatar" style={{
-                    background: model.color + '22',
-                    border: `1.5px solid ${selected ? model.color : model.color + '44'}`,
-                  }}>
-                    <span style={{ color: model.color, fontWeight: 700, fontSize: '11px' }}>{model.initial}</span>
+            {filteredModels.length === 0 && (
+              <div style={{ padding: '20px 14px', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--ink-faint)', textAlign: 'center', letterSpacing: '.12em' }}>
+                No models match
+              </div>
+            )}
+            {providerGroups.map(({ provider, models, total }) => (
+              <div key={provider}>
+                {total > 1 && (
+                  <div className="provider-group-header">
+                    <span className="provider-dot" style={{ background: models[0].color }} />
+                    <span>{provider}</span>
+                    <span className="provider-count">{models.length}</span>
                   </div>
-                  <div className="model-card-info">
-                    <div className="model-card-name">{model.label}</div>
-                    <div className="model-card-meta">{model.provider} · {model.context} · {model.speed}</div>
-                  </div>
-                  <div className="model-card-check" style={{ borderColor: selected ? model.color : undefined }}>
-                    {selected && (
-                      <span style={{ color: model.color, fontSize: '9px', fontWeight: 700 }}>
-                        {blend ? selectedModels.indexOf(model.id) + 1 : '✓'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+                )}
+                {models.map(model => {
+                  const selected = selectedModels.includes(model.id)
+                  return (
+                    <div
+                      key={model.id}
+                      className={`model-card ${selected ? 'selected' : ''}`}
+                      onClick={() => toggleModel(model.id)}
+                    >
+                      <div className="model-card-avatar" style={{
+                        background: model.color + '22',
+                        border: `1.5px solid ${selected ? model.color : model.color + '44'}`,
+                      }}>
+                        <span style={{ color: model.color, fontWeight: 700, fontSize: '11px' }}>{model.initial}</span>
+                      </div>
+                      <div className="model-card-info">
+                        <div className="model-card-name">{model.label}</div>
+                        <div className="model-card-meta">{model.context} · {model.speed}</div>
+                      </div>
+                      <div className="model-card-check" style={{ borderColor: selected ? model.color : undefined }}>
+                        {selected && (
+                          <span style={{ color: model.color, fontSize: '9px', fontWeight: 700 }}>
+                            {blend ? selectedModels.indexOf(model.id) + 1 : '✓'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
             {blend && (
               <div style={{ padding: '6px 14px 8px', fontFamily: 'var(--mono)', fontSize: '8.5px', letterSpacing: '.12em', color: 'var(--ok)', textTransform: 'uppercase', opacity: .8 }}>
                 ⚡ Blend active — {selectedModels.length} models collaborate
@@ -103,6 +152,14 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
             )}
           </div>
         </>
+      )}
+
+      {/* Image mode hint */}
+      {mode === 'image' && (
+        <div style={{ padding: '12px 14px', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--ink-faint)', letterSpacing: '.12em', lineHeight: 1.6 }}>
+          <div style={{ color: 'var(--ink-dim)', fontWeight: 700, marginBottom: '6px' }}>IMAGE MODELS</div>
+          <div>Select model + size in the right panel. FLUX.1 Dev &amp; Schnell, SDXL, SD3 available.</div>
+        </div>
       )}
 
       {/* Sessions */}

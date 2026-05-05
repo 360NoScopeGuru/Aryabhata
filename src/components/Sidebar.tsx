@@ -159,7 +159,7 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
       {mode === 'image' && (
         <div style={{ padding: '12px 14px', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--ink-faint)', letterSpacing: '.12em', lineHeight: 1.6 }}>
           <div style={{ color: 'var(--ink-dim)', fontWeight: 700, marginBottom: '6px' }}>IMAGE MODELS</div>
-          <div>Select model + size in the right panel. FLUX.1 Dev &amp; Schnell, SDXL, SD3 available.</div>
+          <div>Select model + size in the right panel. FLUX.1 Schnell (fast) and FLUX.1 Dev (HD) via NVIDIA NIM.</div>
         </div>
       )}
       </div>{/* /sidebar-models-section */}

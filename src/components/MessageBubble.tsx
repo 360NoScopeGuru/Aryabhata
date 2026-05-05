@@ -1,7 +1,7 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import type { Message } from '@/store/appStore'
 import { MIXING_MODELS } from '@/store/appStore'
 import ContextMenu from './ContextMenu'
@@ -57,10 +57,29 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState(message.content)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pressPos = useRef({ x: 0, y: 0 })
 
   const openCtx = (e: React.MouseEvent) => {
     e.preventDefault()
     setCtxMenu({ x: e.clientX, y: e.clientY })
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0]
+    pressPos.current = { x: t.clientX, y: t.clientY }
+    pressTimer.current = setTimeout(() => {
+      pressTimer.current = null
+      setCtxMenu({ x: pressPos.current.x, y: pressPos.current.y })
+    }, 500)
+  }
+
+  const handleTouchEnd = () => {
+    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null }
+  }
+
+  const handleTouchMove = () => {
+    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null }
   }
 
   const ctxItems = [
@@ -123,7 +142,13 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
   }
 
   return (
-    <div className={`msg fade-up ${isUser ? 'user' : ''}`} onContextMenu={openCtx}>
+    <div
+      className={`msg fade-up ${isUser ? 'user' : ''}`}
+      onContextMenu={openCtx}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
+    >
       <div className="msg-who">
         <span className="who-label">{isUser ? 'YOU' : 'ASST'}</span>
         <span className="who-time">{formatTime(message.created_at)}</span>

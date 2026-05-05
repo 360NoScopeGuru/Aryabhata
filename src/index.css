@@ -729,6 +729,8 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   gap: 0;
+  /* Prevent iOS native callout/selection popover from fighting custom context menu */
+  -webkit-touch-callout: none;
 }
 
 .msg-who {

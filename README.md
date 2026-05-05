@@ -1,14 +1,5 @@
 <div align="center">
 
-```
-  ▄▄▄       ██▀███ ▓██   ██▓ ▄▄▄       ██▄▄▄  ██░ ██  ▄▄▄     ▄▄▄█████▓ ▄▄▄
- ▒████▄    ▓██ ▒ ██▒▒██  ██▒▒████▄    ▒████▄ ▓██░ ██▒▒████▄   ▓  ██▒ ▓▒▒████▄
- ▒██  ▀█▄  ▓██ ░▄█ ▒ ▒██ ██░▒██  ▀█▄  ▒██  ▀█▄▒██▀▀██░▒██  ▀█▄ ▒ ▓██░ ▒░▒██  ▀█▄
- ░██▄▄▄▄██ ▒██▀▀█▄   ░ ▐██▓░░██▄▄▄▄██░██▄▄▄▄██░▓█ ░██ ░██▄▄▄▄██░ ▓██▓ ░ ░██▄▄▄▄██
-  ▓█   ▓██▒░██▓ ▒██▒ ░ ██▒▓░ ▓█   ▓██▒▓█   ▓██▒░▓█▒░██▓ ▓█   ▓██▒ ▒██▒ ░  ▓█   ▓██▒
-  ▒▒   ▓▒█░░ ▒▓ ░▒▓░  ██▒▒▒  ▒▒   ▓▒█░▒▒   ▓▒█░ ▒ ░░▒░▒ ▒▒   ▓▒█░ ▒ ░░    ▒▒   ▓▒█░
-```
-
 # Aryabhata · LLM Instrument
 
 **A multi-model AI studio with streaming inference, Blend mode, code editing, image generation, Arena voting, Persona Gallery, Prompt Enhancer, conversation forking, full mobile support, and per-user persistence — built on NVIDIA NIM.**

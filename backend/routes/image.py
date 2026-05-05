@@ -39,13 +39,29 @@ async def generate_image(body: ImageRequest, _: str = Depends(get_current_user))
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
-    payload = {
-        "prompt": body.prompt,
-        "width": body.width,
-        "height": body.height,
-        "seed": 0,
-        "steps": body.steps,
-    }
+    model = body.model
+    is_schnell = "schnell" in model
+    is_sdxl = "stable-diffusion-xl" in model
+    is_sd3 = "stable-diffusion-3" in model
+
+    if is_sdxl:
+        payload = {
+            "text_prompts": [{"text": body.prompt, "weight": 1}],
+            "cfg_scale": 5.0,
+            "sampler": "K_DPM_2_ANCESTRAL",
+            "steps": body.steps,
+            "seed": 0,
+            "width": body.width,
+            "height": body.height,
+        }
+    else:
+        payload = {
+            "prompt": body.prompt,
+            "width": body.width,
+            "height": body.height,
+            "seed": 0,
+            "steps": min(body.steps, 4) if is_schnell else body.steps,
+        }
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         resp = await client.post(endpoint, headers=headers, json=payload)
@@ -54,11 +70,14 @@ async def generate_image(body: ImageRequest, _: str = Depends(get_current_user))
         raise HTTPException(status_code=resp.status_code, detail=resp.text)
 
     data = resp.json()
-    artifacts = data.get("artifacts", [])
-    if not artifacts:
-        raise HTTPException(status_code=500, detail="No image returned")
-
-    b64 = artifacts[0].get("base64", "")
+    if is_sd3:
+        raw = data.get("image", "")
+        b64 = raw.split(",", 1)[-1] if "," in raw else raw
+    else:
+        artifacts = data.get("artifacts", [])
+        if not artifacts:
+            raise HTTPException(status_code=500, detail=f"No image returned. Response keys: {list(data.keys())}")
+        b64 = artifacts[0].get("base64", "")
     msg_id = str(uuid.uuid4())
 
     # Upload to Cloudinary in a thread (SDK is synchronous)

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
-import { useAppStore, type Message, getActiveModel, isBlendMode, MIXING_MODELS } from '@/store/appStore'
+import { useAppStore, type Message, type Mode, getActiveModel, isBlendMode, MIXING_MODELS } from '@/store/appStore'
 import { useStream } from '@/hooks/useStream'
 import { useAuthFetch } from '@/hooks/useAuthFetch'
 import MessageBubble from './MessageBubble'
@@ -16,12 +16,16 @@ export default function ChatMode({ conversationId }: Props) {
     addSessionTokens, updateLastMessageTelemetry, updateTelemetry, bumpThreadCount,
     temperature, topP, topK, frequencyPenalty, presencePenalty, maxTokens,
     telemetry, systemPrompt, truncateMessagesFrom, updateMessageContent,
+    addConversation, setActiveConversation,
+    arenaVotes, castVote, setLeaderboard,
   } = useAppStore()
   const { stream, stop, streaming } = useStream()
   const { getToken } = useAuth()
   const authFetch = useAuthFetch()
   const bottomRef = useRef<HTMLDivElement>(null)
   const [thinkingModel, setThinkingModel] = useState<string | null>(null)
+  const [blendRoundDone, setBlendRoundDone] = useState(false)
+  const [promptHash, setPromptHash] = useState('')
   const namedRef = useRef(false)
   const convMessages = messages[conversationId] ?? []
 
@@ -59,7 +63,34 @@ export default function ChatMode({ conversationId }: Props) {
     } catch {}
   }
 
+  const handleFork = async (msgId: string) => {
+    try {
+      const res = await authFetch(`/api/conversations/${conversationId}/fork/${msgId}`, { method: 'POST' })
+      if (!res.ok) return
+      const newConv = await res.json()
+      addConversation(newConv)
+      setActiveConversation(newConv.id)
+      setMode(newConv.mode as Mode)
+    } catch {}
+  }
+
+  const handleVote = async (modelId: string) => {
+    if (!promptHash) return
+    const key = `${conversationId}:${promptHash}`
+    try {
+      await authFetch('/api/arena/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conv_id: conversationId, msg_id: modelId, model_id: modelId, prompt_hash: promptHash }),
+      })
+      castVote(key, modelId)
+      const lb = await authFetch('/api/arena/leaderboard')
+      if (lb.ok) setLeaderboard(await lb.json())
+    } catch {}
+  }
+
   const handleSend = async (text: string, imageBase64?: string) => {
+    setBlendRoundDone(false)
     if (autoRoute && !blend) {
       try {
         const res = await authFetch('/api/route', {
@@ -138,6 +169,12 @@ export default function ChatMode({ conversationId }: Props) {
             updateTelemetry({ streaming: false, tpot: tps, outputTokens: tokenCount, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
             setThinkingModel(null)
             if (isFirst) tryAutoName(text)
+            // Compute SHA-256 of user text for Arena dedup, then show vote buttons
+            crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(buf => {
+              const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
+              setPromptHash(hash)
+              setBlendRoundDone(true)
+            })
           },
           onError: () => {
             setThinkingModel(null)
@@ -318,6 +355,10 @@ export default function ChatMode({ conversationId }: Props) {
             isLast={i === convMessages.length - 1}
             onRegenerate={!streaming ? handleRegenerate : undefined}
             onEdit={!streaming && msg.role === 'user' ? (newContent) => handleEdit(msg.id, i, newContent) : undefined}
+            onFork={!streaming ? () => handleFork(msg.id) : undefined}
+            showVoteButton={blendRoundDone}
+            votedFor={promptHash ? (arenaVotes[`${conversationId}:${promptHash}`] ?? null) : null}
+            onVote={handleVote}
           />
         ))}
 

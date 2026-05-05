@@ -1971,3 +1971,139 @@ pre.code-block {
   line-height: 1;
 }
 .model-toast-dismiss:hover { color: var(--ink-dim); }
+
+/* ════════════════════════════════════════════════
+   PROMPT ENHANCER
+   ════════════════════════════════════════════════ */
+.enhance-btn {
+  color: var(--accent2);
+  border-color: color-mix(in srgb, var(--accent2) 35%, transparent);
+}
+.enhance-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent2) 10%, transparent);
+  border-color: var(--accent2);
+}
+.enhance-btn.enhancing { opacity: 0.55; animation: pulse 1s ease-in-out infinite; }
+
+/* ════════════════════════════════════════════════
+   FORK INDICATOR (topbar)
+   ════════════════════════════════════════════════ */
+.crumb-fork {
+  color: var(--accent2);
+  font-size: 13px;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+/* ════════════════════════════════════════════════
+   PERSONA GALLERY
+   ════════════════════════════════════════════════ */
+.persona-gallery { margin-bottom: 8px; }
+.persona-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.persona-scroll::-webkit-scrollbar { display: none; }
+.persona-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 8px;
+  border: var(--border-w) solid var(--line-soft);
+  border-radius: var(--r);
+  background: var(--surface);
+  cursor: pointer;
+  flex-shrink: 0;
+  min-width: 56px;
+  transition: border-color var(--trans), background var(--trans), box-shadow var(--trans);
+}
+.persona-card:hover { border-color: var(--accent); background: var(--glow2); }
+.persona-card.active {
+  border-color: var(--accent);
+  background: var(--glow2);
+  box-shadow: 0 0 10px var(--glow2);
+}
+.persona-icon { font-size: 18px; line-height: 1; }
+.persona-name {
+  font-family: var(--mono);
+  font-size: 7.5px;
+  letter-spacing: .08em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-align: center;
+}
+.persona-card.active .persona-name { color: var(--accent); font-weight: 700; }
+
+/* ════════════════════════════════════════════════
+   ARENA VOTE BUTTONS + LEADERBOARD
+   ════════════════════════════════════════════════ */
+.vote-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 4px 12px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  border: var(--border-w) solid var(--line);
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: all var(--trans);
+}
+.vote-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--glow2);
+}
+.vote-btn.voted {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+  cursor: default;
+  font-weight: 700;
+}
+.vote-btn.vote-lost { opacity: 0.25; cursor: not-allowed; }
+
+.lb-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; }
+.lb-rank {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  color: var(--ink-faint);
+  width: 22px;
+  flex-shrink: 0;
+}
+.lb-name {
+  font-size: 11px;
+  flex: 1;
+  color: var(--ink-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lb-bar-wrap { width: 44px; height: 3px; background: var(--line-soft); border-radius: 2px; flex-shrink: 0; }
+.lb-bar { height: 100%; border-radius: 2px; transition: width .4s ease; }
+.lb-pct {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 26px;
+  text-align: right;
+}
+.lb-empty {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  color: var(--ink-faint);
+  font-style: italic;
+  padding: 6px 0;
+  line-height: 1.5;
+}

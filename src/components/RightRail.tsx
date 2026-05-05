@@ -1,4 +1,7 @@
+import { useEffect } from 'react'
 import { useAppStore, MIXING_MODELS, IMAGE_MODELS, getActiveModel, isBlendMode, type SamplingPreset } from '@/store/appStore'
+import { useAuthFetch } from '@/hooks/useAuthFetch'
+import PersonaGallery from './PersonaGallery'
 
 const SIZES = [
   { label: '1:1',  w: 1024, h: 1024 },
@@ -37,7 +40,16 @@ export default function RightRail() {
     imageWidth, imageHeight, imageSteps, setImageSize, setImageSteps,
     codeLanguage, setCodeLanguage,
     systemPrompt, setSystemPrompt,
+    leaderboard, setLeaderboard,
   } = useAppStore()
+  const authFetch = useAuthFetch()
+
+  useEffect(() => {
+    authFetch('/api/arena/leaderboard')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (Array.isArray(data)) setLeaderboard(data) })
+      .catch(() => {})
+  }, [])
 
   const blend = isBlendMode(selectedModels)
   const activeModelId = mode !== 'image' ? getActiveModel(selectedModels) : null
@@ -49,16 +61,17 @@ export default function RightRail() {
 
   return (
     <aside className="rail-right">
-      {/* System Prompt */}
+      {/* Persona + System Prompt */}
       {mode !== 'image' && (
         <div className="tele-block">
-          <div className="tele-block-label">System Prompt</div>
+          <div className="tele-block-label">Persona</div>
+          <PersonaGallery systemPrompt={systemPrompt} onSelect={setSystemPrompt} />
           <textarea
             className="system-prompt-input"
             value={systemPrompt}
             onChange={e => setSystemPrompt(e.target.value)}
-            placeholder="Set a persona or instructions for all requests…"
-            rows={4}
+            placeholder="Select a persona above or write custom instructions…"
+            rows={3}
           />
         </div>
       )}
@@ -233,6 +246,28 @@ export default function RightRail() {
           <span className="lbl">Auto-Route</span>
           <button className={`tswitch ${autoRoute ? 'on' : ''}`} onClick={() => setAutoRoute(!autoRoute)}><i /></button>
         </div>
+      </div>
+
+      {/* Arena Leaderboard */}
+      <div className="tele-block">
+        <div className="tele-block-label">Arena · Personal Rankings</div>
+        {leaderboard.length === 0 ? (
+          <div className="lb-empty">Use Blend mode and vote to rank models</div>
+        ) : (
+          leaderboard.slice(0, 8).map((e, i) => {
+            const info = MIXING_MODELS.find(m => m.id === e.model_id)
+            return (
+              <div key={e.model_id} className="lb-row">
+                <span className="lb-rank">#{i + 1}</span>
+                <span className="lb-name">{info?.label ?? e.model_id.split('/').pop()}</span>
+                <div className="lb-bar-wrap">
+                  <div className="lb-bar" style={{ width: `${e.win_rate * 100}%`, background: info?.color ?? 'var(--accent)' }} />
+                </div>
+                <span className="lb-pct">{(e.win_rate * 100).toFixed(0)}%</span>
+              </div>
+            )
+          })
+        )}
       </div>
     </aside>
   )

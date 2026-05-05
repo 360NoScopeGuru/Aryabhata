@@ -88,3 +88,21 @@ async def init_db():
         await conn.execute(
             "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT ''"
         )
+        await conn.execute(
+            "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS forked_from TEXT DEFAULT NULL"
+        )
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS votes (
+                id          TEXT PRIMARY KEY,
+                user_id     TEXT NOT NULL,
+                conv_id     TEXT NOT NULL,
+                msg_id      TEXT NOT NULL,
+                model_id    TEXT NOT NULL,
+                prompt_hash TEXT NOT NULL,
+                created_at  TEXT NOT NULL
+            )
+        """)
+        await conn.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS votes_user_prompt
+            ON votes(user_id, conv_id, prompt_hash)
+        """)

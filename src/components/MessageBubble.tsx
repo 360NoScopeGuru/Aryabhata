@@ -13,6 +13,10 @@ interface Props {
   isLast?: boolean
   onRegenerate?: () => void
   onEdit?: (newContent: string) => void
+  onFork?: () => void
+  showVoteButton?: boolean
+  votedFor?: string | null
+  onVote?: (modelId: string) => void
 }
 
 function CodeBlock({ children, className }: { children: string; className?: string }) {
@@ -47,7 +51,7 @@ const toStr = (c: unknown): string =>
   Array.isArray(c) ? c.map(toStr).join('') :
   (c as any)?.props?.children ? toStr((c as any).props.children) : ''
 
-export default function MessageBubble({ message, isStreaming, isLast, onRegenerate, onEdit }: Props) {
+export default function MessageBubble({ message, isStreaming, isLast, onRegenerate, onEdit, onFork, showVoteButton, votedFor, onVote }: Props) {
   const isUser = message.role === 'user'
   const [traceOpen, setTraceOpen] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -71,6 +75,10 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
     ...(isLast && !isUser && onRegenerate && !isStreaming ? [{
       label: 'Regenerate',
       onSelect: () => onRegenerate(),
+    }] : []),
+    ...(onFork && !isStreaming ? [{
+      label: 'Fork from here →',
+      onSelect: () => onFork(),
     }] : []),
   ]
 
@@ -243,6 +251,16 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
             cost: message.cost,
           }, null, 2)}</pre>
         </div>
+      )}
+
+      {showVoteButton && !isUser && message.blend && (
+        <button
+          className={`vote-btn ${votedFor === message.model ? 'voted' : ''} ${votedFor && votedFor !== message.model ? 'vote-lost' : ''}`}
+          onClick={() => onVote?.(message.model!)}
+          disabled={!!votedFor}
+        >
+          {votedFor === message.model ? '★ VOTED' : '☆ Vote this response'}
+        </button>
       )}
 
       {ctxMenu && (

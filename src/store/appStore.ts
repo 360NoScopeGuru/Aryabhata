@@ -95,8 +95,16 @@ export interface Conversation {
   title: string
   mode: Mode
   model?: string
+  forked_from?: string
   created_at: string
   updated_at: string
+}
+
+export interface ArenaEntry {
+  model_id: string
+  wins: number
+  total_rounds: number
+  win_rate: number
 }
 
 export interface Message {
@@ -208,6 +216,12 @@ interface AppState {
   truncateMessagesFrom: (convId: string, index: number) => void
   updateMessageContent: (convId: string, msgId: string, content: string) => void
   clearMessages: (convId: string) => void
+
+  // Arena
+  arenaVotes: Record<string, string>
+  leaderboard: ArenaEntry[]
+  castVote: (key: string, modelId: string) => void
+  setLeaderboard: (entries: ArenaEntry[]) => void
 }
 
 export function getActiveModel(selectedModels: string[]): string {
@@ -336,6 +350,13 @@ export const useAppStore = create<AppState>()(
       clearMessages: (convId) => set((s) => ({
         messages: { ...s.messages, [convId]: [] },
       })),
+
+      arenaVotes: {},
+      leaderboard: [],
+      castVote: (key, modelId) => set((s) => ({
+        arenaVotes: { ...s.arenaVotes, [key]: modelId },
+      })),
+      setLeaderboard: (entries) => set({ leaderboard: entries }),
     }),
     {
       name: 'aryabhata-v3',
@@ -358,6 +379,7 @@ export const useAppStore = create<AppState>()(
         projectName: s.projectName,
         systemPrompt: s.systemPrompt,
         savedPrompts: s.savedPrompts,
+        arenaVotes: s.arenaVotes,
       }),
     }
   )

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import MonacoEditor from '@monaco-editor/react'
 import { useAuth } from '@clerk/clerk-react'
-import { useAppStore, type Message, getActiveModel, MIXING_MODELS } from '@/store/appStore'
+import { useAppStore, type Message, type Mode, getActiveModel, MIXING_MODELS } from '@/store/appStore'
 import { useStream } from '@/hooks/useStream'
 import { useAuthFetch } from '@/hooks/useAuthFetch'
 import MessageBubble from './MessageBubble'
@@ -16,7 +16,7 @@ export default function CodeMode({ conversationId }: Props) {
     selectedModels, codeLanguage, updateConversationTitle, addSessionTokens,
     updateLastMessageTelemetry, updateTelemetry, bumpThreadCount,
     temperature, topP, topK, frequencyPenalty, presencePenalty, maxTokens,
-    telemetry, systemPrompt,
+    telemetry, systemPrompt, addConversation, setActiveConversation, setMode,
   } = useAppStore()
   const { stream, stop, streaming } = useStream()
   const { getToken } = useAuth()
@@ -56,6 +56,17 @@ export default function CodeMode({ conversationId }: Props) {
       })
       const data = await res.json()
       if (data.title) updateConversationTitle(conversationId, data.title)
+    } catch {}
+  }
+
+  const handleFork = async (msgId: string) => {
+    try {
+      const res = await authFetch(`/api/conversations/${conversationId}/fork/${msgId}`, { method: 'POST' })
+      if (!res.ok) return
+      const newConv = await res.json()
+      addConversation(newConv)
+      setActiveConversation(newConv.id)
+      setMode(newConv.mode as Mode)
     } catch {}
   }
 
@@ -186,6 +197,7 @@ export default function CodeMode({ conversationId }: Props) {
               key={msg.id}
               message={msg}
               isStreaming={streaming && i === convMessages.length - 1 && msg.role === 'assistant' && !thinkingModel}
+              onFork={!streaming ? () => handleFork(msg.id) : undefined}
             />
           ))}
 

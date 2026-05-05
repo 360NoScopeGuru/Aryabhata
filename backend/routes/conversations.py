@@ -98,6 +98,42 @@ async def duplicate_conversation(conv_id: str, user_id: str = Depends(get_curren
             "created_at": now(), "updated_at": now()}
 
 
+@router.post("/{conv_id}/fork/{message_id}")
+async def fork_conversation(conv_id: str, message_id: str, user_id: str = Depends(get_current_user)):
+    async with get_db() as db:
+        conv = await db.fetchone("SELECT * FROM conversations WHERE id=? AND user_id=?", (conv_id, user_id))
+        if not conv:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Not found")
+        target = await db.fetchone(
+            "SELECT created_at FROM messages WHERE id=? AND conversation_id=?",
+            (message_id, conv_id)
+        )
+        if not target:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Message not found")
+        msgs = await db.fetchall(
+            "SELECT * FROM messages WHERE conversation_id=? AND created_at<=? ORDER BY created_at ASC",
+            (conv_id, target["created_at"])
+        )
+        new_id = str(uuid.uuid4())
+        new_title = ("⑂ " + conv["title"])[:60]
+        created = now()
+        await db.execute(
+            "INSERT INTO conversations (id, title, mode, model, user_id, forked_from, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
+            (new_id, new_title, conv["mode"], conv["model"], user_id, conv_id, created, created)
+        )
+        for m in msgs:
+            await db.execute(
+                "INSERT INTO messages (id, conversation_id, role, content, mode, model, image_url, created_at) VALUES (?,?,?,?,?,?,?,?)",
+                (str(uuid.uuid4()), new_id, m["role"], m["content"], m["mode"], m["model"], m.get("image_url"), m["created_at"])
+            )
+    return {
+        "id": new_id, "title": new_title, "mode": conv["mode"], "model": conv["model"],
+        "forked_from": conv_id, "created_at": created, "updated_at": created,
+    }
+
+
 @router.delete("/{conv_id}/messages/{msg_id}/onwards")
 async def delete_messages_onwards(conv_id: str, msg_id: str, user_id: str = Depends(get_current_user)):
     async with get_db() as db:

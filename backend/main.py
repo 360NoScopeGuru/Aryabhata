@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pathlib import Path
 from database import init_db
-from routes import chat, code, image, conversations, blend
+from routes import chat, code, image, conversations, blend, prompt, arena
 import os
 
 app = FastAPI(title="Aryabhata API")
@@ -24,6 +24,8 @@ app.include_router(code.router, prefix="/api")
 app.include_router(image.router, prefix="/api")
 app.include_router(conversations.router, prefix="/api")
 app.include_router(blend.router, prefix="/api")
+app.include_router(prompt.router, prefix="/api")
+app.include_router(arena.router, prefix="/api")
 
 @app.on_event("startup")
 async def startup():

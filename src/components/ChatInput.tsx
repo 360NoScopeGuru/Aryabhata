@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, type KeyboardEvent, type ClipboardEvent } from 'react'
 import { useAppStore, MIXING_MODELS, getActiveModel, isBlendMode } from '@/store/appStore'
+import { useAuthFetch } from '@/hooks/useAuthFetch'
 import { v4 as uuid } from 'uuid'
 
 interface Props {
@@ -16,8 +17,11 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
   const [promptsOpen, setPromptsOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveTitle, setSaveTitle] = useState('')
+  const [enhancing, setEnhancing] = useState(false)
+  const [preEnhanceValue, setPreEnhanceValue] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { mode, selectedModels, savedPrompts, addPrompt, removePrompt } = useAppStore()
+  const authFetch = useAuthFetch()
 
   useEffect(() => {
     const ta = textareaRef.current
@@ -63,6 +67,30 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
     setValue('')
     setPastedImage(null)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
+  }
+
+  const handleEnhance = async () => {
+    const trimmed = value.trim()
+    if (!trimmed || enhancing) return
+    setEnhancing(true)
+    setPreEnhanceValue(trimmed)
+    try {
+      const res = await authFetch('/api/prompt/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: trimmed }),
+      })
+      const data = await res.json()
+      if (data.enhanced && !data.error) {
+        setValue(data.enhanced)
+      } else {
+        setPreEnhanceValue(null)
+      }
+    } catch {
+      setPreEnhanceValue(null)
+    } finally {
+      setEnhancing(false)
+    }
   }
 
   const handleSavePrompt = () => {
@@ -145,6 +173,27 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
               </div>
             )}
           </div>
+
+          {value.trim().length > 10 && !streaming && (
+            <button
+              className={`composer-pill enhance-btn ${enhancing ? 'enhancing' : ''}`}
+              onClick={handleEnhance}
+              disabled={enhancing}
+              title="Rewrite this prompt for better results"
+            >
+              {enhancing ? '…' : '✨ Enhance'}
+            </button>
+          )}
+          {preEnhanceValue !== null && (
+            <button
+              className="composer-pill"
+              style={{ color: 'var(--ink-faint)', fontSize: '9px' }}
+              onClick={() => { setValue(preEnhanceValue); setPreEnhanceValue(null) }}
+              title="Restore original prompt"
+            >
+              ↩ Undo
+            </button>
+          )}
 
           <span style={{ marginLeft: 'auto', fontSize: '9px', letterSpacing: '.1em', color: 'var(--ink-faint)' }}>
             {value.length > 0 && <span style={{ color: 'var(--ink-dim)', marginRight: '6px' }}>~{estimatedTokens} tok</span>}

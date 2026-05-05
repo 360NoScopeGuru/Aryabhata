@@ -26,6 +26,9 @@ export default function TopBar() {
           {activeConv && (
             <>
               <span className="sep">/</span>
+              {activeConv.forked_from && (
+                <span className="crumb-fork" title="Forked from another conversation">⑂</span>
+              )}
               <span className="crumb-active" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
                 {activeConv.title}
               </span>

@@ -56,3 +56,12 @@ class ConversationCreate(BaseModel):
 
 class RouteRequest(BaseModel):
     prompt: str
+
+class EnhanceRequest(BaseModel):
+    text: str
+
+class VoteRequest(BaseModel):
+    conv_id: str
+    msg_id: str
+    model_id: str
+    prompt_hash: str

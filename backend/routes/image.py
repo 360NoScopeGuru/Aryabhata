@@ -41,27 +41,15 @@ async def generate_image(body: ImageRequest, _: str = Depends(get_current_user))
     }
     model = body.model
     is_schnell = "schnell" in model
-    is_sdxl = "stable-diffusion-xl" in model
     is_sd3 = "stable-diffusion-3" in model
 
-    if is_sdxl:
-        payload = {
-            "text_prompts": [{"text": body.prompt, "weight": 1}],
-            "cfg_scale": 5.0,
-            "sampler": "K_DPM_2_ANCESTRAL",
-            "steps": body.steps,
-            "seed": 0,
-            "width": body.width,
-            "height": body.height,
-        }
-    else:
-        payload = {
-            "prompt": body.prompt,
-            "width": body.width,
-            "height": body.height,
-            "seed": 0,
-            "steps": min(body.steps, 4) if is_schnell else body.steps,
-        }
+    payload = {
+        "prompt": body.prompt,
+        "width": body.width,
+        "height": body.height,
+        "seed": 0,
+        "steps": min(body.steps, 4) if is_schnell else body.steps,
+    }
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         resp = await client.post(endpoint, headers=headers, json=payload)

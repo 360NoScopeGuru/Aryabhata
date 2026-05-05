@@ -11,7 +11,7 @@
 
 # Aryabhata · LLM Instrument
 
-**A multi-model AI studio with streaming inference, Blend mode, code editing, image generation, Arena voting, Persona Gallery, Prompt Enhancer, conversation forking, and per-user persistence — built on NVIDIA NIM.**
+**A multi-model AI studio with streaming inference, Blend mode, code editing, image generation, Arena voting, Persona Gallery, Prompt Enhancer, conversation forking, full mobile support, and per-user persistence — built on NVIDIA NIM.**
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-aryabhata--rkfm.onrender.com-5eb8ff?style=for-the-badge&logo=render&logoColor=white)](https://aryabhata-rkfm.onrender.com)
 [![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react)](https://react.dev)
@@ -41,6 +41,7 @@ Every conversation is persisted to a cloud Postgres database, scoped to the auth
 | **Fork Conversation** | Right-click any message → Branch a new session starting from that exact point in history |
 | **Auto-Route** | An LLM classifier transparently decides whether your prompt should go to Chat, Code, or Image mode |
 | **Instrument UI** | 5 design themes, live sparkline telemetry, UTC + local clock, and a status bar modeled after an engineering HUD |
+| **Mobile-first** | Fully responsive from 360px phones to 4K — bottom nav, slide-in panels, dynamic viewport height |
 | **Per-user isolation** | Multi-tenant Postgres — every session, message, vote, and setting belongs to the signed-in user |
 
 ---
@@ -244,6 +245,37 @@ Five visual themes, switchable from the status bar drop-up:
 | **BLOOM** | `prism` | Soft pink/light — white surface, magenta accent, radial blob texture |
 
 The active theme is persisted to localStorage. CSS custom property switching means all components re-render instantly with zero JavaScript overhead.
+
+---
+
+### Responsive Layout & Mobile Support
+
+Aryabhata is fully responsive across all screen sizes.
+
+#### Desktop (> 1024px)
+The classic three-column instrument layout: sidebar on the left (260px), conversation in the center, telemetry/controls on the right (300px). Status bar spans the full bottom.
+
+#### Tablet (641px – 1024px)
+Same three-column layout, slightly compressed (240px / 1fr / 260px). All panels remain visible simultaneously.
+
+#### Phone (≤ 640px)
+A completely redesigned single-panel layout optimised for one-handed use:
+
+- **Bottom navigation bar** replaces the status bar with four tabs:
+  | Tab | Icon | Shows |
+  |-----|------|-------|
+  | Models | ◈ | Model selector + provider groups |
+  | Chat | ◉ | Active conversation + composer |
+  | Params | ⊟ | Persona gallery, sampling sliders, telemetry, Arena leaderboard |
+  | History | ≡ | Session list + search |
+
+- **Side panels slide in as full-screen overlays** with a 0.28s cubic-bezier animation — no content is permanently hidden, just a tap away
+- Selecting a session or creating a new chat automatically navigates to the Chat tab
+- **Code mode stacks** the Monaco editor above the AI assistant vertically (45% / 55%) instead of side-by-side
+- **Prompt library popover** repositions to a bottom sheet anchored above the keyboard
+- TopBar is simplified — clock cells and center logo are hidden; breadcrumb + user button remain
+- Uses `100dvh` (dynamic viewport height) so the layout accounts correctly for iOS/Android browser chrome and the virtual keyboard
+- iOS home indicator safe area respected via `env(safe-area-inset-bottom)`
 
 ---
 
@@ -589,7 +621,7 @@ Aryabhata/
 │
 ├── src/
 │   ├── main.tsx                  # React entry: BrowserRouter + ClerkProvider + auth guard
-│   ├── App.tsx                   # Root layout, keyboard shortcuts, model toast
+│   ├── App.tsx                   # Root layout, keyboard shortcuts, model toast, mobile panel state
 │   ├── store/
 │   │   └── appStore.ts           # Zustand store (all state + actions, localStorage persist)
 │   ├── components/
@@ -603,6 +635,7 @@ Aryabhata/
 │   │   ├── MessageBubble.tsx     # Message renderer (Markdown, telemetry, vote button, fork)
 │   │   ├── ChatInput.tsx         # Composer (Enhance button, prompt library, image paste)
 │   │   ├── PersonaGallery.tsx    # 7 built-in persona cards for the system prompt
+│   │   ├── MobileNav.tsx         # Bottom nav bar (Models / Chat / Params / History)
 │   │   └── ContextMenu.tsx       # Right-click context menu anchored to cursor position
 │   ├── hooks/
 │   │   ├── useAuthFetch.ts       # fetch() wrapper that injects Clerk Bearer token

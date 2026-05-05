@@ -78,6 +78,7 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
       </div>
 
       {/* Models section — visible for chat/code only */}
+      <div className="sidebar-models-section">
       {mode !== 'image' && (
         <>
           <div className="console-header">
@@ -161,8 +162,10 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
           <div>Select model + size in the right panel. FLUX.1 Dev &amp; Schnell, SDXL, SD3 available.</div>
         </div>
       )}
+      </div>{/* /sidebar-models-section */}
 
       {/* Sessions */}
+      <div className="sidebar-sessions-section">
       <div className="console-header">
         <h2>Sessions</h2>
         <span className="engine-count">{conversations.length}</span>
@@ -229,6 +232,8 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
           </div>
         ))}
       </div>
+
+      </div>{/* /sidebar-sessions-section */}
 
       {ctxMenu && ctxConv && (
         <ContextMenu

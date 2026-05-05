@@ -140,8 +140,8 @@ export default function CodeMode({ conversationId }: Props) {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100%' }}>
-      <div style={{ width: '50%', display: 'flex', flexDirection: 'column', borderRight: '.5px solid var(--line-soft)' }}>
+    <div className="code-split" style={{ display: 'flex', height: '100%' }}>
+      <div className="code-pane-editor" style={{ width: '50%', display: 'flex', flexDirection: 'column', borderRight: '.5px solid var(--line-soft)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderBottom: '.5px solid var(--line-soft)', flexShrink: 0 }}>
           <span style={{ fontFamily: 'var(--mono)', fontSize: '9.5px', letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--ink-dim)' }}>
             Editor · {codeLanguage}

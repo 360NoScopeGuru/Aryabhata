@@ -9,6 +9,7 @@ import ChatMode from '@/components/ChatMode'
 import CodeMode from '@/components/CodeMode'
 import ImageMode from '@/components/ImageMode'
 import StatusBar from '@/components/StatusBar'
+import MobileNav, { type MobilePanel } from '@/components/MobileNav'
 import { v4 as uuid } from 'uuid'
 
 function ModelToast({ modelIds, onAccept, onDismiss }: { modelIds: string[]; onAccept: () => void; onDismiss: () => void }) {
@@ -69,6 +70,7 @@ export default function App() {
   const { mode, setMode, activeConversationId, setActiveConversation, addConversation, removeConversation, setConversations, theme, conversations, messages, clearMessages, selectedModels, setSelectedModels } = useAppStore()
   const authFetch = useAuthFetch()
   const [pendingModels, setPendingModels] = useState<string[] | null>(null)
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel>('chat')
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -87,6 +89,7 @@ export default function App() {
       setSelectedModels([])
     }
     const title = MODE_LABELS[mode]
+    setMobilePanel('chat')
     try {
       const res = await authFetch('/api/conversations', {
         method: 'POST',
@@ -111,6 +114,7 @@ export default function App() {
   const handleSelectConversation = useCallback((c: Conversation) => {
     setActiveConversation(c.id)
     setMode(c.mode)
+    setMobilePanel('chat')
   }, [setMode])
 
   const handleDeleteConversation = useCallback(async (id: string) => {
@@ -156,7 +160,7 @@ export default function App() {
   const convId = activeConversationId
 
   return (
-    <div className="app-grid">
+    <div className="app-grid" data-mob={mobilePanel}>
       {/* Registration marks */}
       <RegMark pos="tl" />
       <RegMark pos="tr" />
@@ -215,6 +219,8 @@ export default function App() {
       <RightRail />
 
       <StatusBar />
+
+      <MobileNav active={mobilePanel} onChange={setMobilePanel} mode={mode} />
 
       {/* Model resume toast */}
       {pendingModels && pendingModels.length > 0 && (

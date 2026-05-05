@@ -30,12 +30,13 @@ export default function ChatMode({ conversationId }: Props) {
   const activeModel = MIXING_MODELS.find(m => m.id === activeModelId)
 
   useEffect(() => {
+    namedRef.current = false
     authFetch(`/api/conversations/${conversationId}/messages`)
       .then(r => r.ok ? r.json() : [])
       .then(msgs => {
         if (!Array.isArray(msgs)) return
         setMessages(conversationId, msgs)
-        if (msgs.length > 0) namedRef.current = true
+        namedRef.current = msgs.length > 0
       })
       .catch(() => {})
   }, [conversationId])

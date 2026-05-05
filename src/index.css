@@ -13,9 +13,9 @@
   --surface2:  #1a1035;
   --surface3:  #241848;
   --ink:       #e2d4ff;
-  --ink-dim:   rgba(226,212,255,.58);
-  --ink-faint: rgba(226,212,255,.22);
-  --ink-ghost: rgba(226,212,255,.08);
+  --ink-dim:   rgba(226,212,255,.75);
+  --ink-faint: rgba(226,212,255,.45);
+  --ink-ghost: rgba(226,212,255,.10);
   --line:      rgba(160,80,255,.25);
   --line-soft: rgba(160,80,255,.12);
   --accent:    #b44dff;
@@ -40,9 +40,9 @@
   --surface2:  #2d1800;
   --surface3:  #3d2200;
   --ink:       #ffe8cc;
-  --ink-dim:   rgba(255,232,204,.6);
-  --ink-faint: rgba(255,232,204,.25);
-  --ink-ghost: rgba(255,232,204,.08);
+  --ink-dim:   rgba(255,232,204,.78);
+  --ink-faint: rgba(255,232,204,.48);
+  --ink-ghost: rgba(255,232,204,.10);
   --line:      rgba(255,120,30,.25);
   --line-soft: rgba(255,120,30,.12);
   --accent:    #ff6b1a;
@@ -65,9 +65,9 @@
   --surface2:  #eef3ff;
   --surface3:  #dde8ff;
   --ink:       #0a1628;
-  --ink-dim:   rgba(10,22,40,.62);
-  --ink-faint: rgba(10,22,40,.32);
-  --ink-ghost: rgba(10,22,40,.08);
+  --ink-dim:   rgba(10,22,40,.75);
+  --ink-faint: rgba(10,22,40,.50);
+  --ink-ghost: rgba(10,22,40,.09);
   --line:      rgba(0,100,255,.18);
   --line-soft: rgba(0,100,255,.09);
   --accent:    #0066ff;
@@ -90,9 +90,9 @@
   --surface2:  #0a1e0a;
   --surface3:  #0f280f;
   --ink:       #a8ffb0;
-  --ink-dim:   rgba(168,255,176,.58);
-  --ink-faint: rgba(168,255,176,.22);
-  --ink-ghost: rgba(168,255,176,.08);
+  --ink-dim:   rgba(168,255,176,.78);
+  --ink-faint: rgba(168,255,176,.48);
+  --ink-ghost: rgba(168,255,176,.10);
   --line:      rgba(0,255,65,.2);
   --line-soft: rgba(0,255,65,.09);
   --accent:    #00ff41;
@@ -116,9 +116,9 @@
   --surface2:  #fde8f4;
   --surface3:  #fbd4ec;
   --ink:       #1a0820;
-  --ink-dim:   rgba(26,8,32,.62);
-  --ink-faint: rgba(26,8,32,.3);
-  --ink-ghost: rgba(26,8,32,.07);
+  --ink-dim:   rgba(26,8,32,.75);
+  --ink-faint: rgba(26,8,32,.50);
+  --ink-ghost: rgba(26,8,32,.09);
   --line:      rgba(220,80,160,.2);
   --line-soft: rgba(220,80,160,.1);
   --accent:    #e0198c;
@@ -238,9 +238,10 @@ html, body, #root {
 .brand-sub {
   font-family: var(--mono);
   font-size: 8px;
-  letter-spacing: .2em;
+  letter-spacing: .18em;
   color: var(--ink-faint);
   text-transform: uppercase;
+  font-style: italic;
   margin-left: auto;
 }
 
@@ -252,15 +253,15 @@ html, body, #root {
   padding: 0 16px;
   font-family: var(--mono);
   font-size: 9.5px;
-  letter-spacing: .12em;
+  letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--ink-faint);
   min-width: 0;
   overflow: hidden;
 }
-.topbar-crumb .sep { opacity: .4; }
-.topbar-crumb .crumb-active { color: var(--ink-dim); }
-.topbar-crumb .crumb-project { color: var(--accent); font-weight: 600; }
+.topbar-crumb .sep { opacity: .5; }
+.topbar-crumb .crumb-active { color: var(--ink-dim); font-weight: 600; }
+.topbar-crumb .crumb-project { color: var(--accent); font-weight: 700; }
 
 .status-dot {
   width: 5px; height: 5px;
@@ -315,8 +316,8 @@ html, body, #root {
   border-left: var(--border-w) solid var(--line-soft);
 }
 .meta-cell:first-child { border-left: 0; }
-.meta-cell .k { color: var(--ink-faint); font-size: 8px; letter-spacing: .18em; text-transform: uppercase; }
-.meta-cell .v { color: var(--ink); font-size: 11px; font-variant-numeric: tabular-nums; margin-top: 1px; }
+.meta-cell .k { color: var(--ink-faint); font-size: 8.5px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; }
+.meta-cell .v { color: var(--ink); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; }
 
 /* ════════════════════════════════════════════════
    MIXING CONSOLE (LEFT RAIL)
@@ -340,18 +341,19 @@ html, body, #root {
 }
 .console-header h2 {
   font-family: var(--mono);
-  font-size: 8.5px;
-  letter-spacing: .24em;
+  font-size: 9px;
+  letter-spacing: .2em;
   text-transform: uppercase;
-  color: var(--ink-faint);
-  font-weight: 400;
+  color: var(--ink-dim);
+  font-weight: 700;
 }
 .console-header .engine-count {
   font-family: var(--mono);
   font-size: 8.5px;
-  letter-spacing: .16em;
-  color: var(--ink-dim);
+  letter-spacing: .14em;
+  color: var(--ink);
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .new-session-btn {
@@ -589,7 +591,8 @@ html, body, #root {
 
 .session-info { min-width: 0; }
 .session-title {
-  font-size: 11.5px;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -597,11 +600,11 @@ html, body, #root {
 }
 .session-meta {
   font-family: var(--mono);
-  font-size: 8px;
-  letter-spacing: .1em;
+  font-size: 8.5px;
+  letter-spacing: .08em;
   color: var(--ink-faint);
-  margin-top: 1px;
-  text-transform: uppercase;
+  font-style: italic;
+  margin-top: 2px;
 }
 .session-del {
   position: absolute;
@@ -627,10 +630,11 @@ html, body, #root {
 }
 .routing-label {
   font-family: var(--mono);
-  font-size: 8px;
-  letter-spacing: .22em;
+  font-size: 9px;
+  letter-spacing: .18em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-dim);
+  font-weight: 700;
   margin-bottom: 7px;
 }
 .routing-option {
@@ -817,13 +821,13 @@ html, body, #root {
   border-right: var(--border-w) solid var(--line-soft);
   font-family: var(--mono);
   font-size: 8.5px;
-  letter-spacing: .08em;
+  letter-spacing: .06em;
   color: var(--ink-faint);
 }
 .msg-meta-cell:first-child { padding-left: 0; }
 .msg-meta-cell:last-child { border-right: 0; }
-.msg-meta-cell .mk { text-transform: uppercase; font-size: 7.5px; letter-spacing: .16em; opacity: .7; }
-.msg-meta-cell .mv { color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.msg-meta-cell .mk { text-transform: uppercase; font-size: 8px; letter-spacing: .14em; font-weight: 700; color: var(--ink-faint); }
+.msg-meta-cell .mv { color: var(--ink-dim); font-weight: 600; font-variant-numeric: tabular-nums; }
 
 .expand-trace-btn {
   font-family: var(--mono);
@@ -1182,13 +1186,14 @@ html, body, #root {
   display: flex;
   justify-content: space-between;
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 8.5px;
   letter-spacing: .1em;
   color: var(--ink-faint);
   text-transform: uppercase;
-  margin-bottom: 4px;
+  font-weight: 700;
+  margin-bottom: 5px;
 }
-.param-label .pv { color: var(--ink-dim); }
+.param-label .pv { color: var(--ink); font-weight: 700; font-style: normal; }
 
 .param-slider {
   width: 100%;
@@ -1346,8 +1351,8 @@ html, body, #root {
   border-right: var(--border-w) solid var(--line-soft);
 }
 .status-cell.right { margin-left: auto; border-right: 0; border-left: var(--border-w) solid var(--line-soft); }
-.status-cell .sv { color: var(--ink-dim); font-variant-numeric: tabular-nums; }
-.status-ok { color: var(--ok); }
+.status-cell .sv { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .06em; }
+.status-ok { color: var(--ok); font-weight: 600; }
 
 /* ════════════════════════════════════════════════
    EMPTY STATES
@@ -1596,19 +1601,19 @@ pre.code-block {
 }
 .model-card-info { flex: 1; min-width: 0; }
 .model-card-name {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--ink);
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .model-card-meta {
   font-family: var(--mono);
-  font-size: 7.5px;
+  font-size: 8.5px;
   color: var(--ink-faint);
-  letter-spacing: .12em;
-  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-style: italic;
   margin-top: 2px;
 }
 .model-card-check {
@@ -1641,9 +1646,10 @@ pre.code-block {
 .think-label {
   font-family: var(--mono);
   font-size: 9px;
-  letter-spacing: .16em;
+  letter-spacing: .12em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-dim);
+  font-style: italic;
 }
 
 /* ════════════════════════════════════════════════
@@ -1660,9 +1666,10 @@ pre.code-block {
   height: 100%;
   font-family: var(--mono);
   font-size: 8.5px;
-  letter-spacing: .12em;
+  letter-spacing: .1em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-dim);
+  font-weight: 600;
   background: transparent;
   border: 0;
   border-right: var(--border-w) solid var(--line-soft);
@@ -1670,7 +1677,7 @@ pre.code-block {
   transition: color var(--trans), background var(--trans);
   white-space: nowrap;
 }
-.themes-trigger-btn:hover { color: var(--ink-dim); background: var(--surface); }
+.themes-trigger-btn:hover { color: var(--ink); background: var(--surface); }
 
 .themes-dropup {
   position: absolute;

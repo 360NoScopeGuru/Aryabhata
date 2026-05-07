@@ -83,8 +83,9 @@ export default function RightRail() {
         )}
       </div>
 
-      {/* TPOT / TTFT */}
-      <div className="tele-block">
+      {/* TPOT / TTFT — transforms into Live Streaming Theatre during a stream */}
+      <div className={`tele-block ${telemetry.streaming ? 'streaming-theatre' : ''}`}>
+        {telemetry.streaming && <div className="theatre-pulse" />}
         <div className="tele-numbers">
           <div className="tele-num">
             <div className="tn-val">
@@ -106,6 +107,13 @@ export default function RightRail() {
             <div key={i} className="spark-bar" style={{ height: `${Math.max(8, v)}%` }} />
           ))}
         </div>
+        {telemetry.streaming && (
+          <div className="theatre-readout">
+            <span className="theatre-dot" />
+            <span className="theatre-label">LIVE</span>
+            <span className="theatre-counter">{telemetry.outputTokens.toLocaleString()} tok</span>
+          </div>
+        )}
       </div>
 
       {/* Stats */}

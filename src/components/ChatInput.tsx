@@ -1,6 +1,9 @@
 import { useRef, useEffect, useState, type KeyboardEvent, type ClipboardEvent } from 'react'
 import { useAppStore, MIXING_MODELS, getActiveModel, isBlendMode } from '@/store/appStore'
 import { useAuthFetch } from '@/hooks/useAuthFetch'
+import { useVoice } from '@/hooks/useVoice'
+import { findSlashMatches, applySlashCommand, type SlashCommand } from '@/lib/slashCommands'
+import SlashMenu from './SlashMenu'
 import { v4 as uuid } from 'uuid'
 
 interface Props {
@@ -9,9 +12,10 @@ interface Props {
   streaming?: boolean
   placeholder?: string
   disabled?: boolean
+  onSlashAction?: (key: string) => void
 }
 
-export default function ChatInput({ onSend, onStop, streaming, placeholder, disabled }: Props) {
+export default function ChatInput({ onSend, onStop, streaming, placeholder, disabled, onSlashAction }: Props) {
   const [value, setValue] = useState('')
   const [pastedImage, setPastedImage] = useState<string | null>(null)
   const [promptsOpen, setPromptsOpen] = useState(false)
@@ -19,10 +23,14 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
   const [saveTitle, setSaveTitle] = useState('')
   const [enhancing, setEnhancing] = useState(false)
   const [preEnhanceValue, setPreEnhanceValue] = useState<string | null>(null)
+  const [slashIdx, setSlashIdx] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const { mode, selectedModels, savedPrompts, addPrompt, removePrompt } = useAppStore()
+  const { mode, selectedModels, savedPrompts, addPrompt, removePrompt, addToast } = useAppStore()
   const authFetch = useAuthFetch()
+  const voice = useVoice()
+  const lastValueBeforeVoiceRef = useRef('')
 
+  // Auto-resize textarea
   useEffect(() => {
     const ta = textareaRef.current
     if (!ta) return
@@ -30,6 +38,7 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
     ta.style.height = Math.min(ta.scrollHeight, 180) + 'px'
   }, [value])
 
+  // Close prompt library on outside click
   useEffect(() => {
     if (!promptsOpen) return
     const handler = (e: MouseEvent) => {
@@ -40,7 +49,37 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
     return () => document.removeEventListener('mousedown', handler)
   }, [promptsOpen])
 
+  // Voice transcript pipeline — append finalized chunks to the textarea
+  useEffect(() => {
+    voice.onFinal((text: string) => {
+      setValue(prev => {
+        const sep = prev && !prev.endsWith(' ') ? ' ' : ''
+        return prev + sep + text
+      })
+    })
+  }, [voice])
+
+  // Slash command detection
+  const slashActive = value.startsWith('/') && !value.includes('\n')
+  const slashMatches = slashActive ? findSlashMatches(value) : []
+
+  // Reset slash selection when query changes
+  useEffect(() => { setSlashIdx(0) }, [value])
+
   const handleKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Slash menu nav
+    if (slashActive && slashMatches.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setSlashIdx(i => Math.min(i + 1, slashMatches.length - 1)); return }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); setSlashIdx(i => Math.max(i - 1, 0)); return }
+      if (e.key === 'Tab' || (e.key === 'Enter' && slashMatches.length > 0 && value.split(/\s+/).length === 1)) {
+        // Tab or Enter (with no args) → autocomplete the trigger
+        e.preventDefault()
+        const cmd = slashMatches[slashIdx]
+        if (cmd) setValue(cmd.trigger + ' ')
+        return
+      }
+      if (e.key === 'Escape') { e.preventDefault(); setValue(''); return }
+    }
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
   }
 
@@ -60,7 +99,39 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
     }
   }
 
+  const pickSlash = (cmd: SlashCommand) => {
+    const result = applySlashCommand(value, cmd)
+    if (result.kind === 'action') {
+      onSlashAction?.(result.actionKey ?? '')
+      setValue('')
+      addToast({ kind: 'info', message: `${cmd.label.toUpperCase()}` })
+      return
+    }
+    if (result.kind === 'transform') {
+      // Transform commands need user content. If only the trigger was typed,
+      // just autocomplete and wait for user to type.
+      const argsStart = value.indexOf(' ')
+      const args = argsStart > -1 ? value.slice(argsStart + 1).trim() : ''
+      if (!args) {
+        setValue(cmd.trigger + ' ')
+        textareaRef.current?.focus()
+        return
+      }
+      onSend(result.payload)
+      setValue('')
+      if (textareaRef.current) textareaRef.current.style.height = 'auto'
+    }
+  }
+
   const handleSend = () => {
+    // If a slash transform command is fully typed, apply it
+    if (slashActive && slashMatches.length > 0) {
+      const exact = slashMatches.find(c => value.toLowerCase().startsWith(c.trigger + ' ') || value.toLowerCase() === c.trigger)
+      if (exact) {
+        pickSlash(exact)
+        return
+      }
+    }
     const trimmed = value.trim()
     if ((!trimmed && !pastedImage) || disabled) return
     onSend(trimmed || 'What is in this image?', pastedImage ?? undefined)
@@ -102,6 +173,15 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
     setSaving(false)
   }
 
+  const toggleVoice = () => {
+    if (voice.listening) {
+      voice.stop()
+    } else {
+      lastValueBeforeVoiceRef.current = value
+      voice.start()
+    }
+  }
+
   const noModel = mode !== 'image' && selectedModels.length === 0
   const canSend = (value.trim() || pastedImage) && !disabled && !streaming && !noModel
   const blend = isBlendMode(selectedModels)
@@ -111,6 +191,14 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
 
   return (
     <div className="composer-wrap">
+      {slashActive && slashMatches.length > 0 && (
+        <SlashMenu
+          commands={slashMatches}
+          activeIdx={slashIdx}
+          onPick={pickSlash}
+          onSetIdx={setSlashIdx}
+        />
+      )}
       <div className="composer-frame">
         <div className="composer-head">
           {blend ? (
@@ -197,7 +285,7 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
 
           <span style={{ marginLeft: 'auto', fontSize: '9px', letterSpacing: '.1em', color: 'var(--ink-faint)' }}>
             {value.length > 0 && <span style={{ color: 'var(--ink-dim)', marginRight: '6px' }}>~{estimatedTokens} tok</span>}
-            ENTER · SHIFT+ENTER↵
+            {slashActive ? '/ SLASH MODE' : 'ENTER · SHIFT+ENTER↵'}
           </span>
         </div>
 
@@ -214,21 +302,35 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
         <textarea
           ref={textareaRef}
           id="composer-textarea"
-          className="composer-input"
-          value={value}
-          onChange={e => setValue(e.target.value)}
+          className={`composer-input ${voice.listening ? 'voice-listening' : ''}`}
+          value={voice.listening && voice.interim ? value + (value && !value.endsWith(' ') ? ' ' : '') + voice.interim : value}
+          onChange={e => !voice.listening && setValue(e.target.value)}
           onKeyDown={handleKey}
           onPaste={handlePaste}
-          placeholder={noModel ? 'Select a model in the sidebar first…' : (placeholder ?? 'Transmit a message…')}
+          placeholder={
+            noModel ? 'Select a model in the sidebar first…'
+              : voice.listening ? '🎙 Listening…'
+              : (placeholder ?? 'Transmit a message… (try /eli5, /critique, /summarize)')
+          }
           disabled={disabled || streaming || noModel}
           rows={1}
         />
 
         <div className="composer-foot">
           <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.1em', color: 'var(--ink-faint)', textTransform: 'uppercase' }}>
-            CTRL+V paste image
+            CTRL+V paste · "/" for commands
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {voice.supported && (
+              <button
+                className={`mic-btn ${voice.listening ? 'listening' : ''}`}
+                onClick={toggleVoice}
+                disabled={streaming || noModel}
+                title={voice.listening ? 'Stop voice input' : 'Voice input'}
+              >
+                {voice.listening ? '● REC' : '🎙'}
+              </button>
+            )}
             {streaming ? (
               <button className="stop-btn" onClick={onStop}>■ Stop</button>
             ) : (

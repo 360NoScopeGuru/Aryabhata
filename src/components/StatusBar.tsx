@@ -1,7 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAppStore, type Theme } from '@/store/appStore'
 
-interface Props { onShowShortcuts?: () => void }
+interface Props {
+  onShowShortcuts?: () => void
+  onShowInsights?: () => void
+  onShowPalette?: () => void
+}
 
 const THEMES: { id: Theme; label: string; accent: string }[] = [
   { id: 'cad',    label: 'VOID',   accent: '#b44dff' },
@@ -11,7 +15,7 @@ const THEMES: { id: Theme; label: string; accent: string }[] = [
   { id: 'prism',  label: 'BLOOM',  accent: '#e0198c' },
 ]
 
-export default function StatusBar({ onShowShortcuts }: Props) {
+export default function StatusBar({ onShowShortcuts, onShowInsights, onShowPalette }: Props) {
   const { theme, setTheme, mode, telemetry, sessionTokens, lastError } = useAppStore()
   const [themesOpen, setThemesOpen] = useState(false)
   const dropRef = useRef<HTMLDivElement>(null)
@@ -86,6 +90,12 @@ export default function StatusBar({ onShowShortcuts }: Props) {
         <span>PALETTE</span>
         <span className="sv">{theme.toUpperCase()}</span>
       </div>
+      {onShowPalette && (
+        <button className="status-shortcuts-btn" onClick={onShowPalette} title="Command Palette (Ctrl+P)">⌘</button>
+      )}
+      {onShowInsights && (
+        <button className="status-shortcuts-btn" onClick={onShowInsights} title="Insights (Ctrl+I)">📊</button>
+      )}
       {onShowShortcuts && (
         <button className="status-shortcuts-btn" onClick={onShowShortcuts} title="Keyboard shortcuts (Ctrl+/)">⌨</button>
       )}

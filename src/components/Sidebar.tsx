@@ -4,6 +4,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch'
 import { exportConversation } from '@/lib/exportConversation'
 import { formatDate } from '@/lib/utils'
 import ContextMenu from './ContextMenu'
+import ConversationDNA from './ConversationDNA'
 
 const MODE_GLYPH: Record<string, string> = { chat: 'C', code: '{ }', image: '⬡' }
 
@@ -15,9 +16,10 @@ interface Props {
   onDeleteConversation: (id: string) => void
   onDuplicateConversation: (conv: Conversation) => void
   onClearConversation: (id: string) => void
+  onShowMultiverse?: () => void
 }
 
-export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConversation, onDuplicateConversation, onClearConversation }: Props) {
+export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConversation, onDuplicateConversation, onClearConversation, onShowMultiverse }: Props) {
   const { conversations, activeConversationId, selectedModels, toggleModel, setSelectedModels, mode, setMode, messages, updateConversationTitle, pinConversation, addToast } = useAppStore()
   const authFetch = useAuthFetch()
   const [query, setQuery] = useState('')
@@ -181,6 +183,11 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
       <div className="console-header">
         <h2>Sessions</h2>
         <span className="engine-count">{conversations.length}</span>
+        {onShowMultiverse && conversations.length > 1 && (
+          <button className="multiverse-btn" onClick={onShowMultiverse} title="Open Multiverse (Ctrl+M)">
+            🌌
+          </button>
+        )}
       </div>
 
       <button className="new-session-btn" onClick={onNewChat}>
@@ -216,6 +223,7 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
             onContextMenu={e => openCtx(e, conv.id)}
           >
             <div className={`session-glyph ${conv.mode}`}>{MODE_GLYPH[conv.mode]}</div>
+            <ConversationDNA seed={conv.id} size={16} className="session-dna" />
             {conv.pinned && <span className="session-pin-icon" title="Pinned">📌</span>}
             <div className="session-info">
               {renamingId === conv.id ? (

@@ -10,6 +10,9 @@ import CodeMode from '@/components/CodeMode'
 import ImageMode from '@/components/ImageMode'
 import StatusBar from '@/components/StatusBar'
 import MobileNav, { type MobilePanel } from '@/components/MobileNav'
+import CommandPalette from '@/components/CommandPalette'
+import Multiverse from '@/components/Multiverse'
+import Insights from '@/components/Insights'
 import { v4 as uuid } from 'uuid'
 
 function ModelToast({ modelIds, onAccept, onDismiss }: { modelIds: string[]; onAccept: () => void; onDismiss: () => void }) {
@@ -83,10 +86,14 @@ function ToastStack() {
 }
 
 const SHORTCUTS = [
+  { keys: 'Ctrl + P',     desc: 'Command palette' },
   { keys: 'Ctrl + N',     desc: 'New session' },
   { keys: 'Ctrl + E',     desc: 'Export conversation' },
   { keys: 'Ctrl + K',     desc: 'Focus session search' },
+  { keys: 'Ctrl + M',     desc: 'Open Multiverse (fork tree)' },
+  { keys: 'Ctrl + I',     desc: 'Open Insights' },
   { keys: 'Ctrl + /',     desc: 'This shortcuts guide' },
+  { keys: '/',            desc: 'Slash commands in composer' },
   { keys: 'Enter',        desc: 'Send message' },
   { keys: 'Shift + Enter',desc: 'New line in composer' },
   { keys: 'Esc',          desc: 'Stop streaming / close modal' },
@@ -160,6 +167,9 @@ export default function App() {
   const [pendingModels, setPendingModels] = useState<string[] | null>(null)
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('chat')
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [showPalette, setShowPalette] = useState(false)
+  const [showMultiverse, setShowMultiverse] = useState(false)
+  const [showInsights, setShowInsights] = useState(false)
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -235,11 +245,21 @@ export default function App() {
     clearMessages(id)
   }, [authFetch, clearMessages])
 
+  // Slash command actions bubbled up from ChatInput
+  const handleSlashAction = useCallback((key: string) => {
+    if (key === 'new') { handleNewChat(); return }
+    if (key === 'multiverse') { setShowMultiverse(true); return }
+    if (key === 'clear' && activeConversationId) { handleClearConversation(activeConversationId); return }
+  }, [handleNewChat, activeConversationId, handleClearConversation])
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'p') { e.preventDefault(); setShowPalette(s => !s); return }
       if (e.ctrlKey && e.key === 'n') { e.preventDefault(); handleNewChat() }
       if (e.ctrlKey && e.key === 'e') { e.preventDefault(); handleExportConversation() }
+      if (e.ctrlKey && e.key === 'm') { e.preventDefault(); setShowMultiverse(s => !s) }
+      if (e.ctrlKey && e.key === 'i') { e.preventDefault(); setShowInsights(s => !s) }
       if (e.ctrlKey && e.key === '/') { e.preventDefault(); setShowShortcuts(s => !s) }
       if (e.ctrlKey && e.key === 'k') {
         e.preventDefault()
@@ -269,6 +289,7 @@ export default function App() {
         onDeleteConversation={handleDeleteConversation}
         onDuplicateConversation={handleDuplicateConversation}
         onClearConversation={handleClearConversation}
+        onShowMultiverse={() => setShowMultiverse(true)}
       />
 
       {/* Center */}
@@ -303,7 +324,7 @@ export default function App() {
           </div>
         ) : (
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {mode === 'chat'  && <ChatMode  conversationId={convId} />}
+            {mode === 'chat'  && <ChatMode  conversationId={convId} onSlashAction={handleSlashAction} />}
             {mode === 'code'  && <CodeMode  conversationId={convId} />}
             {mode === 'image' && <ImageMode conversationId={convId} />}
           </div>
@@ -312,7 +333,11 @@ export default function App() {
 
       <RightRail />
 
-      <StatusBar onShowShortcuts={() => setShowShortcuts(true)} />
+      <StatusBar
+        onShowShortcuts={() => setShowShortcuts(true)}
+        onShowInsights={() => setShowInsights(true)}
+        onShowPalette={() => setShowPalette(true)}
+      />
 
       <MobileNav active={mobilePanel} onChange={setMobilePanel} mode={mode} />
 
@@ -326,6 +351,25 @@ export default function App() {
       )}
 
       <ToastStack />
+
+      <CommandPalette
+        open={showPalette}
+        onClose={() => setShowPalette(false)}
+        onShowMultiverse={() => setShowMultiverse(true)}
+        onShowInsights={() => setShowInsights(true)}
+        onShowShortcuts={() => setShowShortcuts(true)}
+        onNewChat={handleNewChat}
+        onExport={handleExportConversation}
+      />
+      <Multiverse
+        open={showMultiverse}
+        onClose={() => setShowMultiverse(false)}
+        onJump={(id) => {
+          const conv = conversations.find(c => c.id === id)
+          if (conv) handleSelectConversation(conv)
+        }}
+      />
+      <Insights open={showInsights} onClose={() => setShowInsights(false)} />
 
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
     </div>

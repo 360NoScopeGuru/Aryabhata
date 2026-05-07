@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { UserButton } from '@clerk/clerk-react'
 import { dark } from '@clerk/themes'
 import { useAppStore } from '@/store/appStore'
+import ConversationDNA from './ConversationDNA'
 
 function UTCClock() {
   const [time, setTime] = useState(() => new Date().toISOString().slice(11, 19))
@@ -40,6 +41,7 @@ export default function TopBar() {
           {activeConv && (
             <>
               <span className="sep">/</span>
+              <ConversationDNA seed={activeConv.id} size={18} title={`DNA · ${activeConv.title}`} />
               {activeConv.forked_from && (
                 <span className="crumb-fork" title="Forked from another conversation">⑂</span>
               )}

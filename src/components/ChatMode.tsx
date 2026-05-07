@@ -7,9 +7,12 @@ import MessageBubble from './MessageBubble'
 import ChatInput from './ChatInput'
 import { v4 as uuid } from 'uuid'
 
-interface Props { conversationId: string }
+interface Props {
+  conversationId: string
+  onSlashAction?: (key: string) => void
+}
 
-export default function ChatMode({ conversationId }: Props) {
+export default function ChatMode({ conversationId, onSlashAction }: Props) {
   const {
     messages, addMessage, appendToLastMessage, setMessages,
     selectedModels, autoRoute, setMode, updateConversationTitle,
@@ -407,6 +410,14 @@ export default function ChatMode({ conversationId }: Props) {
         onStop={stop}
         streaming={streaming}
         placeholder={blend ? `Transmit to ${selectedModels.length} models…` : 'Transmit a message…'}
+        onSlashAction={(key) => {
+          if (key === 'fork') {
+            const last = convMessages[convMessages.length - 1]
+            if (last) handleFork(last.id)
+            return
+          }
+          onSlashAction?.(key)
+        }}
       />
     </div>
   )

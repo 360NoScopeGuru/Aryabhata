@@ -1,18 +1,12 @@
 import { SignIn } from '@clerk/clerk-react'
-import { dark } from '@clerk/themes'
+import { useAppStore } from '@/store/appStore'
+import { buildAuthAppearance } from '@/lib/authAppearance'
 import AuthLayout from '@/components/AuthLayout'
 
-// Minimal — all visual styling lives in index.css under `.auth-card-body .cl-*`.
-// We only set the dark base theme + Inter for the input typeface.
-const appearance = {
-  baseTheme: dark,
-  variables: {
-    fontFamily: '"Inter", system-ui, sans-serif',
-    fontSize: '13px',
-  },
-}
-
 export default function SignInPage() {
+  const theme = useAppStore(s => s.theme)
+  const appearance = buildAuthAppearance(theme)
+
   return (
     <AuthLayout mode="signin">
       <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" appearance={appearance} />

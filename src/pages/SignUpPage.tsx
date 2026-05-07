@@ -1,60 +1,70 @@
 import { SignUp } from '@clerk/clerk-react'
 import { dark } from '@clerk/themes'
+import AuthLayout from '@/components/AuthLayout'
 
 const appearance = {
   baseTheme: dark,
   variables: {
-    colorBackground: '#0d0f12',
+    colorBackground: 'transparent',
     colorPrimary: '#7ad7ff',
     colorText: '#e2eaf5',
     colorTextSecondary: '#8a9bb8',
-    colorInputBackground: '#161b25',
+    colorInputBackground: 'rgba(20,26,38,.55)',
     colorInputText: '#e2eaf5',
     colorNeutral: '#8a9bb8',
-    borderRadius: '4px',
+    borderRadius: '6px',
     fontFamily: '"Inter", system-ui, sans-serif',
     fontSize: '13px',
   },
   elements: {
-    card: { boxShadow: 'none', border: '.5px solid rgba(122,215,255,.15)', background: '#0d0f12' },
-    socialButtonsBlockButton: { border: '.5px solid rgba(122,215,255,.15)', background: '#161b25' },
-    dividerLine: { background: 'rgba(122,215,255,.1)' },
-    formFieldInput: { border: '.5px solid rgba(122,215,255,.2)' },
+    rootBox: { width: '100%' },
+    card: {
+      boxShadow: 'none',
+      border: 'none',
+      background: 'transparent',
+      width: '100%',
+      padding: 0,
+    },
+    headerTitle: { display: 'none' },
+    headerSubtitle: { display: 'none' },
+    socialButtonsBlockButton: {
+      border: '.5px solid rgba(122,215,255,.18)',
+      background: 'rgba(20,26,38,.5)',
+      backdropFilter: 'blur(6px)',
+      transition: 'all .15s',
+      '&:hover': {
+        borderColor: 'rgba(122,215,255,.45)',
+        background: 'rgba(122,215,255,.06)',
+      },
+    },
+    dividerLine: { background: 'rgba(122,215,255,.12)' },
+    dividerText: { color: 'rgba(138,155,184,.6)', fontSize: '10px', letterSpacing: '.18em', textTransform: 'uppercase' },
+    formFieldInput: {
+      border: '.5px solid rgba(122,215,255,.22)',
+      backdropFilter: 'blur(4px)',
+      transition: 'all .15s',
+      '&:focus': { borderColor: '#7ad7ff', boxShadow: '0 0 0 3px rgba(122,215,255,.12)' },
+    },
+    formFieldLabel: { fontSize: '10px', letterSpacing: '.16em', textTransform: 'uppercase', color: 'rgba(138,155,184,.85)' },
+    formButtonPrimary: {
+      background: '#7ad7ff',
+      color: '#0d0f12',
+      fontWeight: 600,
+      letterSpacing: '.06em',
+      textTransform: 'uppercase',
+      fontSize: '11px',
+      transition: 'all .15s',
+      '&:hover': { background: '#9be3ff', boxShadow: '0 0 18px rgba(122,215,255,.45)' },
+    },
     footerActionLink: { color: '#7ad7ff' },
+    footer: { background: 'transparent' },
   },
 }
 
 export default function SignUpPage() {
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--bg)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '32px',
-    }}>
-      {/* Brand */}
-      <div style={{ textAlign: 'center' }}>
-        <svg width="40" height="40" viewBox="0 0 28 28" fill="none" style={{ margin: '0 auto 16px', display: 'block' }}>
-          <circle cx="14" cy="14" r="11" stroke="var(--accent)" strokeWidth="0.75" opacity="0.45"/>
-          <circle cx="14" cy="14" r="6.5" stroke="var(--accent)" strokeWidth="0.75"/>
-          <circle cx="14" cy="14" r="2.5" fill="var(--accent)"/>
-          <line x1="0" y1="14" x2="5.5" y2="14" stroke="var(--accent)" strokeWidth="0.75"/>
-          <line x1="22.5" y1="14" x2="28" y2="14" stroke="var(--accent)" strokeWidth="0.75"/>
-          <line x1="14" y1="0" x2="14" y2="5.5" stroke="var(--accent)" strokeWidth="0.75"/>
-          <line x1="14" y1="22.5" x2="14" y2="28" stroke="var(--accent)" strokeWidth="0.75"/>
-        </svg>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: '18px', letterSpacing: '.18em', color: 'var(--ink)', textTransform: 'uppercase', marginBottom: '4px' }}>
-          Aryabhata
-        </div>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.28em', color: 'var(--ink-dim)', textTransform: 'uppercase' }}>
-          LLM · Studio
-        </div>
-      </div>
-
+    <AuthLayout mode="signup">
       <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" appearance={appearance} />
-    </div>
+    </AuthLayout>
   )
 }

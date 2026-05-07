@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState, useRef } from 'react'
-import { useAppStore, type Conversation, type Theme, type Toast, MIXING_MODELS } from '@/store/appStore'
+import { useAppStore, type Conversation, type Theme, MIXING_MODELS } from '@/store/appStore'
 import { useAuthFetch } from '@/hooks/useAuthFetch'
 import { exportConversation } from '@/lib/exportConversation'
 import TopBar from '@/components/TopBar'

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { useAppStore, type Message, type Mode, getActiveModel, isBlendMode, MIXING_MODELS } from '@/store/appStore'
 import { useStream } from '@/hooks/useStream'

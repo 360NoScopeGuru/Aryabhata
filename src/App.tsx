@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState } from 'react'
-import { useAppStore, type Conversation, MIXING_MODELS } from '@/store/appStore'
+import { useAppStore, type Conversation, type Theme, MIXING_MODELS } from '@/store/appStore'
 import { useAuthFetch } from '@/hooks/useAuthFetch'
 import { exportConversation } from '@/lib/exportConversation'
 import TopBar from '@/components/TopBar'
@@ -29,6 +29,29 @@ function ModelToast({ modelIds, onAccept, onDismiss }: { modelIds: string[]; onA
       <button className="model-toast-dismiss" onClick={onDismiss}>×</button>
     </div>
   )
+}
+
+const THEME_FAVICON: Record<Theme, { accent: string; bg: string }> = {
+  cad:    { accent: '#b44dff', bg: '#07040f' },
+  orbit:  { accent: '#ff6b1a', bg: '#0f0800' },
+  brutal: { accent: '#0066ff', bg: '#f4f8ff' },
+  liquid: { accent: '#00ff41', bg: '#020d02' },
+  prism:  { accent: '#e0198c', bg: '#fff0f8' },
+}
+
+function updateFavicon(accent: string, bg: string) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="7" fill="${bg}"/><circle cx="16" cy="16" r="13" stroke="${accent}" stroke-width="0.75" opacity="0.4"/><circle cx="16" cy="16" r="7.5" stroke="${accent}" stroke-width="1.5"/><circle cx="16" cy="16" r="2.5" fill="${accent}"/><line x1="0" y1="16" x2="7.5" y2="16" stroke="${accent}" stroke-width="1.25"/><line x1="24.5" y1="16" x2="32" y2="16" stroke="${accent}" stroke-width="1.25"/><line x1="16" y1="0" x2="16" y2="7.5" stroke="${accent}" stroke-width="1.25"/><line x1="16" y1="24.5" x2="16" y2="32" stroke="${accent}" stroke-width="1.25"/></svg>`
+  const blob = new Blob([svg], { type: 'image/svg+xml' })
+  const url = URL.createObjectURL(blob)
+  let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
+  if (!link) {
+    link = document.createElement('link')
+    link.rel = 'icon'
+    link.type = 'image/svg+xml'
+    document.head.appendChild(link)
+  }
+  if (link.href.startsWith('blob:')) URL.revokeObjectURL(link.href)
+  link.href = url
 }
 
 const MODE_LABELS: Record<string, string> = {
@@ -74,6 +97,8 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
+    const { accent, bg } = THEME_FAVICON[theme]
+    updateFavicon(accent, bg)
   }, [theme])
 
   useEffect(() => {

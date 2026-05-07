@@ -2341,3 +2341,311 @@ pre.code-block {
     overflow-y: auto;
   }
 }
+
+/* ═══════════════════════════════════════════════
+   TOAST NOTIFICATION STACK
+   ═══════════════════════════════════════════════ */
+.toast-stack {
+  position: fixed;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 500;
+  pointer-events: none;
+  align-items: center;
+}
+.toast-stack .model-toast {
+  pointer-events: all;
+  position: static;
+  transform: none;
+  animation: toast-in .15s ease;
+}
+.toast--error { border-color: var(--warn) !important; }
+.toast--error .model-toast-dismiss { color: var(--warn); }
+.toast--ok    { border-color: var(--ok) !important; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-6px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ═══════════════════════════════════════════════
+   STREAM ERROR RETRY BANNER
+   ═══════════════════════════════════════════════ */
+.stream-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  background: color-mix(in srgb, var(--warn) 8%, var(--surface));
+  border-top: .5px solid color-mix(in srgb, var(--warn) 30%, transparent);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  color: var(--warn);
+}
+.retry-btn {
+  padding: 3px 10px;
+  border: .5px solid var(--warn);
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--warn);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  cursor: pointer;
+  transition: background var(--trans);
+}
+.retry-btn:hover { background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.retry-dismiss {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--ink-faint);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.retry-dismiss:hover { color: var(--ink); }
+
+/* ═══════════════════════════════════════════════
+   STATUS BAR ADDITIONS
+   ═══════════════════════════════════════════════ */
+.status-err-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--warn);
+  box-shadow: 0 0 6px var(--warn);
+  flex-shrink: 0;
+  animation: pulse 1s ease-in-out infinite;
+}
+.status-err { color: var(--warn); font-weight: 600; }
+.status-shortcuts-btn {
+  margin-left: 6px;
+  padding: 0 8px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  border-left: .5px solid var(--line-soft);
+  color: var(--ink-faint);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color var(--trans);
+}
+.status-shortcuts-btn:hover { color: var(--accent); }
+
+/* ═══════════════════════════════════════════════
+   SHORTCUTS MODAL
+   ═══════════════════════════════════════════════ */
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.shortcuts-modal {
+  background: var(--surface);
+  border: var(--border-w) solid var(--line);
+  border-radius: calc(var(--r) * 1.5);
+  min-width: 320px;
+  max-width: 480px;
+  width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,.4);
+  animation: toast-in .15s ease;
+}
+.shortcuts-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: var(--border-w) solid var(--line-soft);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .16em;
+  color: var(--accent);
+}
+.shortcuts-modal-head button {
+  background: transparent;
+  border: none;
+  color: var(--ink-faint);
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+}
+.shortcuts-modal-head button:hover { color: var(--ink); }
+.shortcuts-table { padding: 10px 8px 14px; display: flex; flex-direction: column; gap: 2px; }
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: var(--r);
+}
+.shortcut-row:hover { background: var(--surface2); }
+.shortcut-key {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .08em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: .5px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 4px;
+  padding: 3px 7px;
+  white-space: nowrap;
+  min-width: 110px;
+  text-align: center;
+}
+.shortcut-desc {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-dim);
+  letter-spacing: .06em;
+}
+
+/* ── Batch 8: Custom Personas ───────────────────────────────────── */
+.persona-card-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.persona-delete-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface3, var(--surface2));
+  border: .5px solid var(--line-soft);
+  color: var(--ink-faint);
+  font-size: 9px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: color .12s, background .12s;
+  z-index: 2;
+}
+.persona-delete-btn:hover { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--surface2)); }
+.persona-add-btn { opacity: 0.6; }
+.persona-add-btn:hover { opacity: 1; }
+.persona-create-form {
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--surface2);
+  border: .5px solid var(--line-soft);
+  border-radius: var(--r);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.persona-form-row { display: flex; gap: 6px; }
+.persona-form-icon {
+  width: 36px;
+  background: var(--surface);
+  border: .5px solid var(--line-soft);
+  border-radius: var(--r);
+  color: var(--ink);
+  font-size: 14px;
+  text-align: center;
+  padding: 4px 2px;
+  flex-shrink: 0;
+}
+.persona-form-name {
+  flex: 1;
+  background: var(--surface);
+  border: .5px solid var(--line-soft);
+  border-radius: var(--r);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 4px 8px;
+}
+.persona-form-prompt {
+  background: var(--surface);
+  border: .5px solid var(--line-soft);
+  border-radius: var(--r);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 6px 8px;
+  resize: vertical;
+  line-height: 1.5;
+}
+.persona-form-prompt::placeholder, .persona-form-name::placeholder, .persona-form-icon::placeholder {
+  color: var(--ink-faint);
+}
+.persona-form-actions { display: flex; gap: 6px; }
+
+/* ── Batch 4: Code download button ──────────────────────────────── */
+.code-download-btn {
+  background: none;
+  border: .5px solid var(--line-soft);
+  cursor: pointer;
+  color: var(--ink-dim);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--r);
+  transition: color .15s, border-color .15s;
+}
+.code-download-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ── Batch 3: Sampling reset button ─────────────────────────────── */
+.reset-params-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-faint);
+  font-size: 11px;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color .15s;
+}
+.reset-params-btn:hover { color: var(--accent); }
+
+/* ── Batch 5: Pinned sessions ───────────────────────────────────── */
+.session-item.pinned {
+  border-left: 2px solid color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.session-pin-icon {
+  font-size: 9px;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/* ── Batch 3: Session message count ─────────────────────────────── */
+.session-msg-count {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink-faint);
+  letter-spacing: .06em;
+}
+
+/* ── Batch 3: Message timestamp tooltip ─────────────────────────── */
+.msg-time-tooltip {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .08em;
+  color: var(--ink);
+  background: var(--surface2);
+  border: .5px solid var(--line-soft);
+  border-radius: var(--r);
+  padding: 5px 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+  pointer-events: none;
+  z-index: 100;
+}

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from models import ImageRequest
+from models import ImageRequest, ALLOWED_IMAGE_MODELS
 from database import get_db
 from auth import get_current_user
 import os, uuid, httpx, asyncio
@@ -32,6 +32,8 @@ def _upload_to_cloudinary(b64: str, public_id: str) -> str:
 
 @router.post("/image/generate")
 async def generate_image(body: ImageRequest, _: str = Depends(get_current_user)):
+    if body.model not in ALLOWED_IMAGE_MODELS:
+        raise HTTPException(status_code=400, detail=f"Model not allowed: {body.model}")
     api_key = os.getenv("NVIDIA_API_KEY_IMAGE") or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CHAT")
     endpoint = f"{NVIDIA_GENAI_BASE}/{body.model}"
     headers = {

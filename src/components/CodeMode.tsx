@@ -17,6 +17,7 @@ export default function CodeMode({ conversationId }: Props) {
     updateLastMessageTelemetry, updateTelemetry, bumpThreadCount,
     temperature, topP, topK, frequencyPenalty, presencePenalty, maxTokens,
     telemetry, systemPrompt, addConversation, setActiveConversation, setMode,
+    addToast, setLastError,
   } = useAppStore()
   const { stream, stop, streaming } = useStream()
   const { getToken } = useAuth()
@@ -24,6 +25,7 @@ export default function CodeMode({ conversationId }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [editorCode, setEditorCode] = useState('# Write your code here\n')
   const [thinkingModel, setThinkingModel] = useState<string | null>(null)
+  const [streamError, setStreamError] = useState(false)
   const namedRef = useRef(false)
   const convMessages = messages[conversationId] ?? []
   const activeModelId = getActiveModel(selectedModels)
@@ -57,6 +59,17 @@ export default function CodeMode({ conversationId }: Props) {
       const data = await res.json()
       if (data.title) updateConversationTitle(conversationId, data.title)
     } catch {}
+  }
+
+  const handleDownload = () => {
+    const ext = codeLanguage === 'cpp' ? 'cpp' : codeLanguage === 'bash' ? 'sh' : codeLanguage
+    const blob = new Blob([editorCode], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `aryabhata-${codeLanguage}-${Date.now()}.${ext}`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const handleFork = async (msgId: string) => {
@@ -125,14 +138,17 @@ export default function CodeMode({ conversationId }: Props) {
           const tokenCount = outputTokens ?? 0
           const genMs = Math.max(1, latencyMs - ttftMs)
           const tps = tokenCount > 0 ? (tokenCount / genMs) * 1000 : 0
-          updateTelemetry({ streaming: false, ttft: ttftMs, tpot: tps, outputTokens: tokenCount, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
+          updateTelemetry({ streaming: false, ttft: ttftMs, tpot: tps, outputTokens: tokenCount, carbon: tokenCount * 0.0023, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
           updateLastMessageTelemetry(conversationId, { ttft: ttftMs, tpot: tps, latency: latencyMs, outputTokens: tokenCount, finishReason: 'stop' })
+          setLastError(null)
           setThinkingModel(null)
           if (isFirst) tryAutoName(text)
         },
-        onError: () => {
+        onError: (err) => {
           setThinkingModel(null)
           updateTelemetry({ streaming: false })
+          setStreamError(true)
+          addToast({ kind: 'error', message: `STREAM ERROR · ${err ?? 'Unknown'}` })
         },
       },
       authHeaders,
@@ -146,7 +162,10 @@ export default function CodeMode({ conversationId }: Props) {
           <span style={{ fontFamily: 'var(--mono)', fontSize: '9.5px', letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--ink-dim)' }}>
             Editor · {codeLanguage}
           </span>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.12em', color: 'var(--ink-faint)', textTransform: 'uppercase' }}>Monaco</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button className="code-download-btn" onClick={handleDownload} title="Download code">↓ Save</button>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '.12em', color: 'var(--ink-faint)', textTransform: 'uppercase' }}>Monaco</span>
+          </div>
         </div>
         <div style={{ flex: 1 }}>
           <MonacoEditor
@@ -213,8 +232,15 @@ export default function CodeMode({ conversationId }: Props) {
           <div ref={bottomRef} />
         </div>
 
+        {streamError && !streaming && (
+          <div className="stream-error-banner">
+            <span>⚠ Generation failed</span>
+            <button className="retry-dismiss" onClick={() => setStreamError(false)}>×</button>
+          </div>
+        )}
+
         <ChatInput
-          onSend={handleSend}
+          onSend={(text) => { setStreamError(false); handleSend(text) }}
           onStop={stop}
           streaming={streaming}
           placeholder="Ask about your code…"

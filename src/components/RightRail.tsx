@@ -28,7 +28,7 @@ export default function RightRail() {
     mode,
     telemetry, sessionTokens,
     selectedModels,
-    samplingPreset, setSamplingPreset,
+    samplingPreset, setSamplingPreset, resetSamplingParams,
     temperature, setTemperature,
     topP, setTopP,
     topK, setTopK,
@@ -116,7 +116,7 @@ export default function RightRail() {
             <span className="tv">{telemetry.outputTokens.toLocaleString()}</span>
           </div>
           <div className="tele-kv">
-            <span className="tk">CO₂</span>
+            <span className="tk">CO₂ <span style={{ opacity: 0.5, fontSize: '8px' }}>est.</span></span>
             <span className="tv">{telemetry.carbon.toFixed(1)}<sub>g</sub></span>
           </div>
           <div className="tele-kv">
@@ -169,7 +169,10 @@ export default function RightRail() {
 
       {/* Sampling */}
       <div className="tele-block">
-        <div className="tele-block-label">Sampling Preset</div>
+        <div className="tele-block-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>Sampling Preset</span>
+          <button className="reset-params-btn" onClick={resetSamplingParams} title="Reset to defaults">↺</button>
+        </div>
         <div className="sampling-presets">
           {PRESETS.map(p => (
             <button key={p.id} className={`preset-btn ${samplingPreset === p.id ? 'active' : ''}`} onClick={() => setSamplingPreset(p.id)}>

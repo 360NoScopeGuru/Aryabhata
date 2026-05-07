@@ -26,7 +26,7 @@ async def create_conversation(body: ConversationCreate, user_id: str = Depends(g
 async def list_conversations(user_id: str = Depends(get_current_user)):
     async with get_db() as db:
         rows = await db.fetchall(
-            "SELECT * FROM conversations WHERE user_id=? ORDER BY updated_at DESC",
+            "SELECT * FROM conversations WHERE user_id=? ORDER BY pinned DESC, updated_at DESC",
             (user_id,)
         )
     return rows
@@ -132,6 +132,17 @@ async def fork_conversation(conv_id: str, message_id: str, user_id: str = Depend
         "id": new_id, "title": new_title, "mode": conv["mode"], "model": conv["model"],
         "forked_from": conv_id, "created_at": created, "updated_at": created,
     }
+
+
+@router.patch("/{conv_id}/pin")
+async def pin_conversation(conv_id: str, body: dict, user_id: str = Depends(get_current_user)):
+    pinned = bool(body.get("pinned", False))
+    async with get_db() as db:
+        await db.execute(
+            "UPDATE conversations SET pinned=?, updated_at=? WHERE id=? AND user_id=?",
+            (pinned, now(), conv_id, user_id)
+        )
+    return {"ok": True, "pinned": pinned}
 
 
 @router.delete("/{conv_id}/messages/{msg_id}/onwards")

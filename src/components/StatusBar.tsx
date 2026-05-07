@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAppStore, type Theme } from '@/store/appStore'
 
+interface Props { onShowShortcuts?: () => void }
+
 const THEMES: { id: Theme; label: string; accent: string }[] = [
   { id: 'cad',    label: 'VOID',   accent: '#b44dff' },
   { id: 'orbit',  label: 'EMBER',  accent: '#ff6b1a' },
@@ -9,8 +11,8 @@ const THEMES: { id: Theme; label: string; accent: string }[] = [
   { id: 'prism',  label: 'BLOOM',  accent: '#e0198c' },
 ]
 
-export default function StatusBar() {
-  const { theme, setTheme, mode, telemetry, sessionTokens } = useAppStore()
+export default function StatusBar({ onShowShortcuts }: Props) {
+  const { theme, setTheme, mode, telemetry, sessionTokens, lastError } = useAppStore()
   const [themesOpen, setThemesOpen] = useState(false)
   const dropRef = useRef<HTMLDivElement>(null)
 
@@ -56,11 +58,20 @@ export default function StatusBar() {
       </div>
 
       <div className="status-cell">
-        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--ok)', boxShadow: '0 0 6px var(--ok)', flexShrink: 0 }} />
-        <span className="status-ok">SYS NOMINAL</span>
+        {lastError ? (
+          <>
+            <span className="status-err-dot" />
+            <span className="status-err">SYS ERR</span>
+          </>
+        ) : (
+          <>
+            <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--ok)', boxShadow: '0 0 6px var(--ok)', flexShrink: 0 }} />
+            <span className="status-ok">SYS NOMINAL</span>
+          </>
+        )}
       </div>
       <div className="status-cell">
-        <span>RTT</span>
+        <span>TTFT</span>
         <span className="sv">{telemetry.ttft > 0 ? `${telemetry.ttft}ms` : '—'}</span>
       </div>
       <div className="status-cell">
@@ -75,6 +86,9 @@ export default function StatusBar() {
         <span>PALETTE</span>
         <span className="sv">{theme.toUpperCase()}</span>
       </div>
+      {onShowShortcuts && (
+        <button className="status-shortcuts-btn" onClick={onShowShortcuts} title="Keyboard shortcuts (Ctrl+/)">⌨</button>
+      )}
     </div>
   )
 }

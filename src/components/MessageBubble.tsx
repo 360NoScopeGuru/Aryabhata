@@ -2,6 +2,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import { useState, useRef } from 'react'
+import * as Tooltip from '@radix-ui/react-tooltip'
 import type { Message } from '@/store/appStore'
 import { MIXING_MODELS } from '@/store/appStore'
 import ContextMenu from './ContextMenu'
@@ -120,7 +121,18 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
       <div className="msg fade-up">
         <div className="msg-who">
           <span className="who-label">ASST</span>
-          <span className="who-time">{formatTime(message.created_at)}</span>
+          <Tooltip.Provider delayDuration={400}>
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <span className="who-time">{formatTime(message.created_at)}</span>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content className="msg-time-tooltip" sideOffset={4}>
+                  {new Date(message.created_at).toLocaleString()}
+                </Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          </Tooltip.Provider>
         </div>
         <div className="img-thumb" style={{ maxWidth: '480px' }}>
           <img src={message.image_url} alt={message.content} />
@@ -151,7 +163,18 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
     >
       <div className="msg-who">
         <span className="who-label">{isUser ? 'YOU' : 'ASST'}</span>
-        <span className="who-time">{formatTime(message.created_at)}</span>
+        <Tooltip.Provider delayDuration={400}>
+          <Tooltip.Root>
+            <Tooltip.Trigger asChild>
+              <span className="who-time">{formatTime(message.created_at)}</span>
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Content className="msg-time-tooltip" sideOffset={4}>
+                {new Date(message.created_at).toLocaleString()}
+              </Tooltip.Content>
+            </Tooltip.Portal>
+          </Tooltip.Root>
+        </Tooltip.Provider>
 
         {/* Action buttons */}
         {!isStreaming && (

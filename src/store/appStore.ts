@@ -5,6 +5,13 @@ export type Mode = 'chat' | 'code' | 'image'
 export type Theme = 'cad' | 'orbit' | 'brutal' | 'liquid' | 'prism'
 export type SamplingPreset = 'precise' | 'balanced' | 'creative' | 'forensic'
 
+export interface Toast {
+  id: string
+  message: string
+  kind: 'error' | 'ok' | 'info'
+  autoDismissMs?: number
+}
+
 export interface MixingModel {
   id: string
   label: string
@@ -92,6 +99,7 @@ export interface Conversation {
   mode: Mode
   model?: string
   forked_from?: string
+  pinned?: boolean
   created_at: string
   updated_at: string
 }
@@ -166,6 +174,9 @@ interface AppState {
   systemPrompt: string
   savedPrompts: { id: string; title: string; content: string }[]
 
+  // Custom personas
+  customPersonas: { id: string; name: string; icon: string; prompt: string }[]
+
   // Session meta
   sessionTokens: number
   projectName: string
@@ -180,6 +191,7 @@ interface AppState {
   addConversation: (c: Conversation) => void
   removeConversation: (id: string) => void
   updateConversationTitle: (id: string, title: string) => void
+  pinConversation: (id: string, pinned: boolean) => void
   setMessages: (convId: string, msgs: Message[]) => void
   addMessage: (msg: Message) => void
   appendToLastMessage: (convId: string, delta: string) => void
@@ -206,6 +218,11 @@ interface AppState {
   setProjectName: (n: string) => void
   bumpThreadCount: () => void
 
+  resetSamplingParams: () => void
+
+  addCustomPersona: (p: { id: string; name: string; icon: string; prompt: string }) => void
+  removeCustomPersona: (id: string) => void
+
   setSystemPrompt: (p: string) => void
   addPrompt: (p: { id: string; title: string; content: string }) => void
   removePrompt: (id: string) => void
@@ -218,6 +235,15 @@ interface AppState {
   leaderboard: ArenaEntry[]
   castVote: (key: string, modelId: string) => void
   setLeaderboard: (entries: ArenaEntry[]) => void
+
+  // Toasts
+  toasts: Toast[]
+  addToast: (t: Omit<Toast, 'id'>) => void
+  dismissToast: (id: string) => void
+
+  // System error state
+  lastError: string | null
+  setLastError: (e: string | null) => void
 }
 
 export function getActiveModel(selectedModels: string[]): string {
@@ -261,6 +287,7 @@ export const useAppStore = create<AppState>()(
 
       systemPrompt: '',
       savedPrompts: [],
+      customPersonas: [],
       sessionTokens: 0,
       projectName: 'Untitled Project',
       threadCount: 0,
@@ -277,6 +304,11 @@ export const useAppStore = create<AppState>()(
       })),
       updateConversationTitle: (id, title) => set((s) => ({
         conversations: s.conversations.map((c) => c.id === id ? { ...c, title } : c),
+      })),
+      pinConversation: (id, pinned) => set((s) => ({
+        conversations: [...s.conversations]
+          .map((c) => c.id === id ? { ...c, pinned } : c)
+          .sort((a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false)),
       })),
       setMessages: (convId, msgs) => set((s) => ({ messages: { ...s.messages, [convId]: msgs } })),
       addMessage: (msg) => set((s) => {
@@ -331,6 +363,19 @@ export const useAppStore = create<AppState>()(
       setProjectName: (n) => set({ projectName: n }),
       bumpThreadCount: () => set((s) => ({ threadCount: s.threadCount + 1 })),
 
+      addCustomPersona: (p) => set((s) => ({ customPersonas: [...s.customPersonas, p] })),
+      removeCustomPersona: (id) => set((s) => ({ customPersonas: s.customPersonas.filter(p => p.id !== id) })),
+
+      resetSamplingParams: () => set({
+        samplingPreset: 'balanced',
+        temperature: SAMPLING_PRESETS.balanced.temperature,
+        topP: SAMPLING_PRESETS.balanced.topP,
+        topK: SAMPLING_PRESETS.balanced.topK,
+        frequencyPenalty: 0.0,
+        presencePenalty: 0.0,
+        maxTokens: 4096,
+      }),
+
       setSystemPrompt: (p) => set({ systemPrompt: p }),
       addPrompt: (p) => set((s) => ({ savedPrompts: [...s.savedPrompts, p] })),
       removePrompt: (id) => set((s) => ({ savedPrompts: s.savedPrompts.filter(p => p.id !== id) })),
@@ -353,6 +398,17 @@ export const useAppStore = create<AppState>()(
         arenaVotes: { ...s.arenaVotes, [key]: modelId },
       })),
       setLeaderboard: (entries) => set({ leaderboard: entries }),
+
+      toasts: [],
+      addToast: (t) => {
+        const id = Math.random().toString(36).slice(2)
+        set((s) => ({ toasts: [...s.toasts, { ...t, id }] }))
+        if (t.kind === 'error') set({ lastError: t.message })
+      },
+      dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter(t => t.id !== id) })),
+
+      lastError: null,
+      setLastError: (e) => set({ lastError: e }),
     }),
     {
       name: 'aryabhata-v3',
@@ -373,8 +429,10 @@ export const useAppStore = create<AppState>()(
         presencePenalty: s.presencePenalty,
         maxTokens: s.maxTokens,
         projectName: s.projectName,
+        threadCount: s.threadCount,
         systemPrompt: s.systemPrompt,
         savedPrompts: s.savedPrompts,
+        customPersonas: s.customPersonas,
         arenaVotes: s.arenaVotes,
       }),
     }

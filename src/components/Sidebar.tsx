@@ -18,7 +18,7 @@ interface Props {
 }
 
 export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConversation, onDuplicateConversation, onClearConversation }: Props) {
-  const { conversations, activeConversationId, selectedModels, toggleModel, setSelectedModels, mode, setMode, messages, updateConversationTitle } = useAppStore()
+  const { conversations, activeConversationId, selectedModels, toggleModel, setSelectedModels, mode, setMode, messages, updateConversationTitle, pinConversation, addToast } = useAppStore()
   const authFetch = useAuthFetch()
   const [query, setQuery] = useState('')
   const [modelQuery, setModelQuery] = useState('')
@@ -43,6 +43,18 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
   const filtered = query.trim()
     ? conversations.filter(c => c.title.toLowerCase().includes(query.toLowerCase()))
     : conversations
+
+  const handlePin = async (conv: Conversation) => {
+    const newPinned = !conv.pinned
+    pinConversation(conv.id, newPinned)
+    try {
+      await authFetch(`/api/conversations/${conv.id}/pin`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinned: newPinned }),
+      })
+    } catch { addToast({ kind: 'error', message: 'PIN FAILED' }) }
+  }
 
   const commitRename = async (id: string, value: string) => {
     const trimmed = value.trim()
@@ -199,11 +211,12 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
         {filtered.map(conv => (
           <div
             key={conv.id}
-            className={`session-item ${activeConversationId === conv.id ? 'active' : ''}`}
+            className={`session-item ${activeConversationId === conv.id ? 'active' : ''} ${conv.pinned ? 'pinned' : ''}`}
             onClick={() => renamingId !== conv.id && onSelectConversation(conv)}
             onContextMenu={e => openCtx(e, conv.id)}
           >
             <div className={`session-glyph ${conv.mode}`}>{MODE_GLYPH[conv.mode]}</div>
+            {conv.pinned && <span className="session-pin-icon" title="Pinned">📌</span>}
             <div className="session-info">
               {renamingId === conv.id ? (
                 <input
@@ -222,7 +235,12 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
               ) : (
                 <div className="session-title">{conv.title}</div>
               )}
-              <div className="session-meta">{formatDate(conv.updated_at)}</div>
+              <div className="session-meta">
+                {formatDate(conv.updated_at)}
+                {messages[conv.id] !== undefined && (
+                  <span className="session-msg-count"> · {messages[conv.id].length} msgs</span>
+                )}
+              </div>
             </div>
             <button
               className="session-del"
@@ -241,6 +259,13 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
           y={ctxMenu.y}
           onClose={() => setCtxMenu(null)}
           items={[
+            {
+              label: ctxConv.pinned ? 'Unpin' : 'Pin',
+              onSelect: () => {
+                handlePin(ctxConv)
+                setCtxMenu(null)
+              },
+            },
             {
               label: 'Rename',
               shortcut: 'F2',

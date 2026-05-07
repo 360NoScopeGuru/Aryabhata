@@ -106,3 +106,15 @@ async def init_db():
             CREATE UNIQUE INDEX IF NOT EXISTS votes_user_prompt
             ON votes(user_id, conv_id, prompt_hash)
         """)
+        await conn.execute(
+            "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT FALSE"
+        )
+        await conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_messages_conv_id ON messages(conversation_id)"
+        )
+        await conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id)"
+        )
+        await conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC)"
+        )

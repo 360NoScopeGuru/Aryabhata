@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 
 class Message(BaseModel):
@@ -41,13 +41,18 @@ class BlendRequest(BaseModel):
     max_tokens: int = 2048
     system_prompt: Optional[str] = None
 
+ALLOWED_IMAGE_MODELS = frozenset({
+    "black-forest-labs/flux.1-schnell",
+    "black-forest-labs/flux.1-dev",
+})
+
 class ImageRequest(BaseModel):
     conversation_id: str
-    prompt: str
+    prompt: str = Field(min_length=1, max_length=8000)
     model: str = "black-forest-labs/flux.1-dev"
-    width: int = 1024
-    height: int = 1024
-    steps: int = 35
+    width: int = Field(default=1024, ge=64, le=2048)
+    height: int = Field(default=1024, ge=64, le=2048)
+    steps: int = Field(default=35, ge=1, le=100)
 
 class ConversationCreate(BaseModel):
     title: str

@@ -1,5 +1,5 @@
-import { useEffect, useCallback, useState } from 'react'
-import { useAppStore, type Conversation, type Theme, MIXING_MODELS } from '@/store/appStore'
+import { useEffect, useCallback, useState, useRef } from 'react'
+import { useAppStore, type Conversation, type Theme, type Toast, MIXING_MODELS } from '@/store/appStore'
 import { useAuthFetch } from '@/hooks/useAuthFetch'
 import { exportConversation } from '@/lib/exportConversation'
 import TopBar from '@/components/TopBar'
@@ -54,6 +54,71 @@ function updateFavicon(accent: string, bg: string) {
   link.href = url
 }
 
+function ToastStack() {
+  const { toasts, dismissToast } = useAppStore()
+  const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+
+  useEffect(() => {
+    toasts.forEach(t => {
+      if (!timers.current[t.id] && (t.autoDismissMs ?? (t.kind !== 'error' ? 3500 : 0))) {
+        timers.current[t.id] = setTimeout(() => {
+          dismissToast(t.id)
+          delete timers.current[t.id]
+        }, t.autoDismissMs ?? 3500)
+      }
+    })
+  }, [toasts, dismissToast])
+
+  if (toasts.length === 0) return null
+  return (
+    <div className="toast-stack">
+      {toasts.map(t => (
+        <div key={t.id} className={`model-toast toast--${t.kind}`}>
+          <span>{t.message}</span>
+          <button className="model-toast-dismiss" onClick={() => dismissToast(t.id)}>×</button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const SHORTCUTS = [
+  { keys: 'Ctrl + N',     desc: 'New session' },
+  { keys: 'Ctrl + E',     desc: 'Export conversation' },
+  { keys: 'Ctrl + K',     desc: 'Focus session search' },
+  { keys: 'Ctrl + /',     desc: 'This shortcuts guide' },
+  { keys: 'Enter',        desc: 'Send message' },
+  { keys: 'Shift + Enter',desc: 'New line in composer' },
+  { keys: 'Esc',          desc: 'Stop streaming / close modal' },
+]
+
+function ShortcutsModal({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="shortcuts-modal" onClick={e => e.stopPropagation()}>
+        <div className="shortcuts-modal-head">
+          <span>KEYBOARD SHORTCUTS</span>
+          <button onClick={onClose}>×</button>
+        </div>
+        <div className="shortcuts-table">
+          {SHORTCUTS.map(s => (
+            <div key={s.keys} className="shortcut-row">
+              <kbd className="shortcut-key">{s.keys}</kbd>
+              <span className="shortcut-desc">{s.desc}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const MODE_LABELS: Record<string, string> = {
   chat: 'New Chat',
   code: 'New Code Session',
@@ -90,10 +155,11 @@ const RegMark = ({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) => {
 }
 
 export default function App() {
-  const { mode, setMode, activeConversationId, setActiveConversation, addConversation, removeConversation, setConversations, theme, conversations, messages, clearMessages, selectedModels, setSelectedModels } = useAppStore()
+  const { mode, setMode, activeConversationId, setActiveConversation, addConversation, removeConversation, setConversations, theme, conversations, messages, clearMessages, selectedModels, setSelectedModels, addToast } = useAppStore()
   const authFetch = useAuthFetch()
   const [pendingModels, setPendingModels] = useState<string[] | null>(null)
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('chat')
+  const [showShortcuts, setShowShortcuts] = useState(false)
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -105,7 +171,7 @@ export default function App() {
     authFetch('/api/conversations')
       .then((r) => r.ok ? r.json() : [])
       .then((data) => Array.isArray(data) && setConversations(data))
-      .catch(() => {})
+      .catch(() => addToast({ kind: 'error', message: 'LOAD FAILED · Sessions' }))
   }, [authFetch])
 
   const handleNewChat = useCallback(async () => {
@@ -126,6 +192,7 @@ export default function App() {
       addConversation(conv)
       setActiveConversation(conv.id)
     } catch {
+      addToast({ kind: 'error', message: 'CREATE FAILED · Session' })
       const conv: Conversation = {
         id: uuid(), title, mode,
         created_at: new Date().toISOString(),
@@ -143,7 +210,8 @@ export default function App() {
   }, [setMode])
 
   const handleDeleteConversation = useCallback(async (id: string) => {
-    try { await authFetch(`/api/conversations/${id}`, { method: 'DELETE' }) } catch {}
+    try { await authFetch(`/api/conversations/${id}`, { method: 'DELETE' }) }
+    catch { addToast({ kind: 'error', message: 'DELETE FAILED · Session' }) }
     removeConversation(id)
   }, [authFetch])
 
@@ -159,7 +227,7 @@ export default function App() {
       const newConv: Conversation = await res.json()
       addConversation(newConv)
       setActiveConversation(newConv.id)
-    } catch {}
+    } catch { addToast({ kind: 'error', message: 'DUPLICATE FAILED' }) }
   }, [authFetch, addConversation, setActiveConversation])
 
   const handleClearConversation = useCallback(async (id: string) => {
@@ -172,6 +240,7 @@ export default function App() {
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'n') { e.preventDefault(); handleNewChat() }
       if (e.ctrlKey && e.key === 'e') { e.preventDefault(); handleExportConversation() }
+      if (e.ctrlKey && e.key === '/') { e.preventDefault(); setShowShortcuts(s => !s) }
       if (e.ctrlKey && e.key === 'k') {
         e.preventDefault()
         const el = document.getElementById('session-search') as HTMLInputElement | null
@@ -243,7 +312,7 @@ export default function App() {
 
       <RightRail />
 
-      <StatusBar />
+      <StatusBar onShowShortcuts={() => setShowShortcuts(true)} />
 
       <MobileNav active={mobilePanel} onChange={setMobilePanel} mode={mode} />
 
@@ -255,6 +324,10 @@ export default function App() {
           onDismiss={() => setPendingModels(null)}
         />
       )}
+
+      <ToastStack />
+
+      {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
     </div>
   )
 }

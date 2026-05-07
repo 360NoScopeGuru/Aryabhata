@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
+import { useAppStore } from '@/store/appStore'
+import { v4 as uuid } from 'uuid'
 
-const PERSONAS = [
+const BUILTIN_PERSONAS = [
   {
     id: 'rubber-duck',
     name: 'Rubber Duck',
@@ -51,17 +53,24 @@ interface Props {
 }
 
 export default function PersonaGallery({ systemPrompt, onSelect }: Props) {
+  const { customPersonas, addCustomPersona, removeCustomPersona } = useAppStore()
+  const allPersonas = [...BUILTIN_PERSONAS, ...customPersonas]
+
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newIcon, setNewIcon] = useState('')
+  const [newPrompt, setNewPrompt] = useState('')
 
   useEffect(() => {
     if (!activeId) return
-    const selected = PERSONAS.find(p => p.id === activeId)
+    const selected = allPersonas.find(p => p.id === activeId)
     if (selected && systemPrompt !== selected.prompt) {
       setActiveId(null)
     }
   }, [systemPrompt, activeId])
 
-  const handleSelect = (persona: typeof PERSONAS[0]) => {
+  const handleSelect = (persona: typeof BUILTIN_PERSONAS[0]) => {
     if (activeId === persona.id) {
       setActiveId(null)
       onSelect('')
@@ -71,21 +80,84 @@ export default function PersonaGallery({ systemPrompt, onSelect }: Props) {
     }
   }
 
+  const handleCreate = () => {
+    const name = newName.trim()
+    const prompt = newPrompt.trim()
+    if (!name || !prompt) return
+    addCustomPersona({ id: uuid(), name, icon: newIcon.trim() || '✦', prompt })
+    setNewName('')
+    setNewIcon('')
+    setNewPrompt('')
+    setCreating(false)
+  }
+
   return (
     <div className="persona-gallery">
       <div className="persona-scroll">
-        {PERSONAS.map(p => (
-          <button
-            key={p.id}
-            className={`persona-card ${activeId === p.id ? 'active' : ''}`}
-            onClick={() => handleSelect(p)}
-            title={p.prompt}
-          >
-            <span className="persona-icon">{p.icon}</span>
-            <span className="persona-name">{p.name}</span>
-          </button>
+        {allPersonas.map(p => (
+          <div key={p.id} className="persona-card-wrap">
+            <button
+              className={`persona-card ${activeId === p.id ? 'active' : ''}`}
+              onClick={() => handleSelect(p)}
+              title={p.prompt}
+            >
+              <span className="persona-icon">{p.icon}</span>
+              <span className="persona-name">{p.name}</span>
+            </button>
+            {customPersonas.some(c => c.id === p.id) && (
+              <button
+                className="persona-delete-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (activeId === p.id) { setActiveId(null); onSelect('') }
+                  removeCustomPersona(p.id)
+                }}
+                title="Remove persona"
+              >×</button>
+            )}
+          </div>
         ))}
+
+        <button className="persona-card persona-add-btn" onClick={() => setCreating(true)} title="Create custom persona">
+          <span className="persona-icon">+</span>
+          <span className="persona-name">Custom</span>
+        </button>
       </div>
+
+      {creating && (
+        <div className="persona-create-form">
+          <div className="persona-form-row">
+            <input
+              className="persona-form-icon"
+              value={newIcon}
+              onChange={e => setNewIcon(e.target.value)}
+              placeholder="✦"
+              maxLength={4}
+            />
+            <input
+              className="persona-form-name"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              placeholder="Name"
+            />
+          </div>
+          <textarea
+            className="persona-form-prompt"
+            value={newPrompt}
+            onChange={e => setNewPrompt(e.target.value)}
+            placeholder="System prompt for this persona…"
+            rows={3}
+          />
+          <div className="persona-form-actions">
+            <button className="send-btn" style={{ fontSize: '9px', padding: '4px 12px' }} onClick={handleCreate}>
+              Save
+            </button>
+            <button className="stop-btn" style={{ fontSize: '9px', padding: '4px 10px' }} onClick={() => setCreating(false)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

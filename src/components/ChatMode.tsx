@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { useAppStore, type Message, type Mode, getActiveModel, isBlendMode, MIXING_MODELS } from '@/store/appStore'
 import { useStream } from '@/hooks/useStream'
@@ -18,6 +18,7 @@ export default function ChatMode({ conversationId }: Props) {
     telemetry, systemPrompt, truncateMessagesFrom, updateMessageContent,
     addConversation, setActiveConversation,
     arenaVotes, castVote, setLeaderboard,
+    addToast, setLastError,
   } = useAppStore()
   const { stream, stop, streaming } = useStream()
   const { getToken } = useAuth()
@@ -26,6 +27,7 @@ export default function ChatMode({ conversationId }: Props) {
   const [thinkingModel, setThinkingModel] = useState<string | null>(null)
   const [blendRoundDone, setBlendRoundDone] = useState(false)
   const [promptHash, setPromptHash] = useState('')
+  const [streamError, setStreamError] = useState(false)
   const namedRef = useRef(false)
   const convMessages = messages[conversationId] ?? []
 
@@ -42,7 +44,7 @@ export default function ChatMode({ conversationId }: Props) {
         setMessages(conversationId, msgs)
         namedRef.current = msgs.length > 0
       })
-      .catch(() => {})
+      .catch(() => addToast({ kind: 'error', message: 'LOAD FAILED · Messages' }))
   }, [conversationId])
 
   useEffect(() => {
@@ -66,12 +68,12 @@ export default function ChatMode({ conversationId }: Props) {
   const handleFork = async (msgId: string) => {
     try {
       const res = await authFetch(`/api/conversations/${conversationId}/fork/${msgId}`, { method: 'POST' })
-      if (!res.ok) return
+      if (!res.ok) { addToast({ kind: 'error', message: 'FORK FAILED' }); return }
       const newConv = await res.json()
       addConversation(newConv)
       setActiveConversation(newConv.id)
       setMode(newConv.mode as Mode)
-    } catch {}
+    } catch { addToast({ kind: 'error', message: 'FORK FAILED' }) }
   }
 
   const handleVote = async (modelId: string) => {
@@ -86,11 +88,13 @@ export default function ChatMode({ conversationId }: Props) {
       castVote(key, modelId)
       const lb = await authFetch('/api/arena/leaderboard')
       if (lb.ok) setLeaderboard(await lb.json())
-    } catch {}
+    } catch { addToast({ kind: 'error', message: 'VOTE FAILED' }) }
   }
 
   const handleSend = async (text: string, imageBase64?: string) => {
     setBlendRoundDone(false)
+    setStreamError(false)
+    setLastError(null)
     if (autoRoute && !blend) {
       try {
         const res = await authFetch('/api/route', {
@@ -166,7 +170,8 @@ export default function ChatMode({ conversationId }: Props) {
             const tokenCount = outputTokens ?? 0
             const genMs = Math.max(1, latencyMs - ttftMs)
             const tps = tokenCount > 0 ? (tokenCount / genMs) * 1000 : 0
-            updateTelemetry({ streaming: false, tpot: tps, outputTokens: tokenCount, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
+            updateTelemetry({ streaming: false, tpot: tps, outputTokens: tokenCount, carbon: tokenCount * 0.0023, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
+            setLastError(null)
             setThinkingModel(null)
             if (isFirst) tryAutoName(text)
             // Compute SHA-256 of user text for Arena dedup, then show vote buttons
@@ -176,9 +181,11 @@ export default function ChatMode({ conversationId }: Props) {
               setBlendRoundDone(true)
             })
           },
-          onError: () => {
+          onError: (err) => {
             setThinkingModel(null)
             updateTelemetry({ streaming: false })
+            setStreamError(true)
+            addToast({ kind: 'error', message: `STREAM ERROR · ${err ?? 'Unknown'}` })
           },
         },
         authHeaders,
@@ -220,14 +227,17 @@ export default function ChatMode({ conversationId }: Props) {
             const tokenCount = outputTokens ?? 0
             const genMs = Math.max(1, latencyMs - ttftMs)
             const tps = tokenCount > 0 ? (tokenCount / genMs) * 1000 : 0
-            updateTelemetry({ streaming: false, ttft: ttftMs, tpot: tps, outputTokens: tokenCount, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
+            updateTelemetry({ streaming: false, ttft: ttftMs, tpot: tps, outputTokens: tokenCount, carbon: tokenCount * 0.0023, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
             updateLastMessageTelemetry(conversationId, { ttft: ttftMs, tpot: tps, latency: latencyMs, outputTokens: tokenCount, finishReason: 'stop' })
+            setLastError(null)
             setThinkingModel(null)
             if (isFirst) tryAutoName(text)
           },
-          onError: () => {
+          onError: (err) => {
             setThinkingModel(null)
             updateTelemetry({ streaming: false })
+            setStreamError(true)
+            addToast({ kind: 'error', message: `STREAM ERROR · ${err ?? 'Unknown'}` })
           },
         },
         authHeaders,
@@ -260,10 +270,11 @@ export default function ChatMode({ conversationId }: Props) {
         onDone: (_id, outputTokens) => {
           const tokenCount = outputTokens ?? 0
           const tps = tokenCount > 0 ? (tokenCount / Math.max(1, Date.now() - startTime - ttftMs)) * 1000 : 0
-          updateTelemetry({ streaming: false, tpot: tps, outputTokens: tokenCount, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
+          updateTelemetry({ streaming: false, tpot: tps, outputTokens: tokenCount, carbon: tokenCount * 0.0023, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
+          setLastError(null)
           setThinkingModel(null)
         },
-        onError: () => { setThinkingModel(null); updateTelemetry({ streaming: false }) },
+        onError: (err) => { setThinkingModel(null); updateTelemetry({ streaming: false }); setStreamError(true); addToast({ kind: 'error', message: `STREAM ERROR · ${err ?? 'Unknown'}` }) },
       }, authHeaders)
     } else {
       addMessage({ id: uuid(), conversation_id: conversationId, role: 'assistant', content: '', mode: 'chat', model: activeModelId, created_at: new Date().toISOString() })
@@ -280,11 +291,12 @@ export default function ChatMode({ conversationId }: Props) {
           const latencyMs = Date.now() - startTime
           const tokenCount = outputTokens ?? 0
           const tps = tokenCount > 0 ? (tokenCount / Math.max(1, latencyMs - ttftMs)) * 1000 : 0
-          updateTelemetry({ streaming: false, ttft: ttftMs, tpot: tps, outputTokens: tokenCount, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
+          updateTelemetry({ streaming: false, ttft: ttftMs, tpot: tps, outputTokens: tokenCount, carbon: tokenCount * 0.0023, spark: [...prevSpark.slice(1), Math.min(100, tps)] })
           updateLastMessageTelemetry(conversationId, { ttft: ttftMs, tpot: tps, latency: latencyMs, outputTokens: tokenCount, finishReason: 'stop' })
+          setLastError(null)
           setThinkingModel(null)
         },
-        onError: () => { setThinkingModel(null); updateTelemetry({ streaming: false }) },
+        onError: (err) => { setThinkingModel(null); updateTelemetry({ streaming: false }); setStreamError(true); addToast({ kind: 'error', message: `STREAM ERROR · ${err ?? 'Unknown'}` }) },
       }, authHeaders)
     }
   }
@@ -382,8 +394,16 @@ export default function ChatMode({ conversationId }: Props) {
         <div ref={bottomRef} />
       </div>
 
+      {streamError && !streaming && (
+        <div className="stream-error-banner">
+          <span>⚠ Generation failed</span>
+          <button className="retry-btn" onClick={() => { setStreamError(false); handleRegenerate() }}>↺ Retry</button>
+          <button className="retry-dismiss" onClick={() => setStreamError(false)}>×</button>
+        </div>
+      )}
+
       <ChatInput
-        onSend={handleSend}
+        onSend={(text, img) => { setStreamError(false); handleSend(text, img) }}
         onStop={stop}
         streaming={streaming}
         placeholder={blend ? `Transmit to ${selectedModels.length} models…` : 'Transmit a message…'}

@@ -50,7 +50,9 @@ export function useStream() {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6))
-              if (data.model_start) {
+              if (data.error) {
+                opts.onError?.(data.error)
+              } else if (data.model_start) {
                 opts.onModelStart?.(data.model_start)
               } else if (data.model_done !== undefined) {
                 opts.onModelDone?.(data.model_done, data.text ?? '')
@@ -62,7 +64,7 @@ export function useStream() {
                 opts.onDelta(data.delta)
               }
               if (data.done) opts.onDone?.(data.id, data.output_tokens)
-            } catch {}
+            } catch { /* malformed SSE frame — skip */ }
           }
         }
       }

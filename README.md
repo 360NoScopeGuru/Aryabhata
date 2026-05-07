@@ -13,7 +13,7 @@
 
 # Aryabhata · LLM Instrument
 
-**A multi-model AI studio with streaming inference, Blend mode, code editing, image generation, Arena voting, Persona Gallery, Prompt Enhancer, conversation forking, conversation pinning, custom personas, full error surfaces, and per-user persistence — built on NVIDIA NIM.**
+**A multi-model AI studio with streaming inference, Blend mode, code editing, image generation, Arena voting, Persona Gallery, Prompt Enhancer, Command Palette, slash commands, voice input, generative conversation fingerprints, fork tree visualization, personal analytics, and per-user persistence — built on NVIDIA NIM.**
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-aryabhata--rkfm.onrender.com-5eb8ff?style=for-the-badge&logo=render&logoColor=white)](https://aryabhata-rkfm.onrender.com)
 [![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react)](https://react.dev)
@@ -43,6 +43,13 @@ Every conversation is persisted to a cloud Postgres database, scoped to the auth
 | **Fork Conversation** | Right-click any message → Branch a new session starting from that exact point in history |
 | **Conversation Pinning** | Pin important sessions to the top of the list with a 📌 indicator |
 | **Auto-Route** | An LLM classifier transparently decides whether your prompt should go to Chat, Code, or Image mode |
+| **Command Palette** | Ctrl+P opens a fuzzy-searchable index of every action, model, theme, persona, and recent conversation |
+| **Slash Commands** | Type `/` in the composer for `/eli5`, `/critique`, `/summarize`, `/translate`, `/code`, `/refactor`, `/whatif`, plus action commands |
+| **Conversation DNA** | Every session gets a deterministic generative SVG fingerprint — a unique visual identity in the breadcrumb and sidebar |
+| **Multiverse** | Visualize all conversations and their fork lineage as an interactive SVG tree (Ctrl+M) |
+| **Insights** | Personal analytics: 26-week activity heatmap, top-models bar chart, 24-hour active-time radial (Ctrl+I) |
+| **Voice Input** | Web Speech API mic in the composer — live interim transcript appended to the textarea while you speak |
+| **Streaming Theatre** | The right-rail telemetry block transforms during active streams — pulsing sweep, blinking LIVE indicator, real-time token counter |
 | **Instrument UI** | 5 design themes (with matching favicons), live sparkline telemetry, UTC + local clock, and a status bar modeled after an engineering HUD |
 | **Error Surfaces** | Full toast notification stack, streaming retry button, SYS ERR status indicator — no silent failures |
 | **Mobile-first** | Fully responsive from 360px phones to 4K — bottom nav, slide-in panels, dynamic viewport height |
@@ -108,6 +115,96 @@ The right rail's system prompt section is replaced by a scrollable row of **7 bu
 | **+ Custom** | ✦ | Click `+` to create your own persona with a name, icon, and system prompt |
 
 Clicking a card fills the system prompt textarea. Editing the textarea manually deselects the card (custom prompt mode). Clicking the active card again clears the system prompt entirely. Custom persona cards show a `×` delete button; built-in cards do not. All custom personas persist to localStorage.
+
+---
+
+## Phase III · The Multiverse
+
+Aryabhata's third feature wave reimagines the surface area of the app. Seven novel features that don't exist in any other LLM chat client.
+
+### 🌌 Conversation DNA
+
+Every conversation gets a **deterministic generative SVG fingerprint** derived from its ID via FNV-1a hash → linear congruential RNG. The same conversation always renders the same pattern of arcs, asymmetric spokes, and outer pips — but every conversation is unique.
+
+Visible in two places:
+- **TopBar breadcrumb** — large fingerprint (18px) beside the active conversation title
+- **Sidebar session list** — small fingerprint (16px) on every session row, opacity rising on hover/active
+
+Implementation: `src/lib/dnaGenerator.ts` (~70 lines, zero deps).
+
+### ⌨️ Command Palette · `Ctrl + P`
+
+A Linear / Raycast / VS Code-style universal command interface. Open with **Ctrl+P** (or click the `⌘` button in the status bar) and fuzzy-search across:
+
+- **Actions** — new chat, export, multiverse, insights, shortcuts, auto-route toggle, reset sampling, clear chat
+- **Modes** — switch to chat / code / image
+- **Themes** — VOID, EMBER, ARCTIC, MATRIX, BLOOM
+- **Models** — every one of the 40 language models, with provider/context/speed metadata
+- **Personas** — every built-in + custom persona
+- **Conversations** — your 50 most recent sessions
+
+Custom positional fuzzy matcher (`src/lib/fuzzyMatch.ts`) with word-boundary and consecutive-match bonuses. Matched characters render in the accent color with a subtle text-shadow glow. Arrow keys navigate, Enter selects, Esc closes.
+
+### / Slash Commands
+
+Type `/` at the start of the composer to reveal a live-filtered command menu. Tab autocompletes the trigger; the typed payload is then transformed before sending.
+
+**Transform commands** (rewrite the message before sending):
+
+| Trigger | Behavior |
+|---------|----------|
+| `/eli5` | Reframes as an explain-like-I'm-5 question |
+| `/critique` | Asks the model to find every flaw rigorously |
+| `/summarize` | Condense to 3-5 bullet points |
+| `/translate <lang>` | Translate to a target language |
+| `/code` | Frame as a code-generation request |
+| `/expand` | Develop a short note into a full response |
+| `/refactor` | Refactor code for clarity and modern idioms |
+| `/whatif` | Explore counterfactuals and alternate scenarios |
+
+**Action commands** (trigger an app action immediately):
+
+| Trigger | Action |
+|---------|--------|
+| `/clear` | Wipe all messages in the current chat |
+| `/fork` | Branch a new conversation from the most recent message |
+| `/new` | Start a fresh session |
+| `/multiverse` | Open the conversation tree visualizer |
+
+### 🎙 Voice Input
+
+A microphone button in the composer footer, powered by the **Web Speech API**. Press to start recording — interim transcript chunks render directly in the textarea while you speak; finalized chunks append automatically. Pulsing red border indicates active listening. Available on Chrome, Edge, and Safari.
+
+### 🌌 Conversation Multiverse · `Ctrl + M`
+
+An **interactive SVG tree visualization** of every conversation and its fork lineage. Press Ctrl+M (or click the `🌌` button in the sidebar) to open.
+
+- **Layout** — depth on the x-axis (forks branch right), in-order traversal on the y-axis. Bezier-curve edges connect parents to children.
+- **Nodes** — each conversation is a card showing its DNA fingerprint, title, mode, pin/fork status. Mode is color-coded (chat / code / image).
+- **Filter** — search bar narrows to conversations matching a title substring.
+- **Click to jump** — selecting any node closes the modal and switches to that conversation.
+
+Implementation in `src/components/Multiverse.tsx`. Builds the forest from the existing `forked_from` column on the `conversations` table — no schema changes.
+
+### 📊 Insights · `Ctrl + I`
+
+A **personal analytics dashboard** computed entirely client-side from your message history.
+
+- **8 stat cards** — total sessions, messages, output tokens, CO₂ estimate, average TTFT, threads, forks, current session tokens
+- **26-week activity heatmap** — GitHub-style contribution grid. Each cell is a day; opacity scales with that day's token volume; hover for exact totals
+- **Top Models bar chart** — your 8 most-used models by message count, ordered with provider-color win-rate bars
+- **24-hour active-time radial** — when you actually use the app, broken down by local hour. Spokes radiate from a center hub; longer spokes = more activity at that hour
+
+### 🎬 Live Streaming Theatre
+
+While a stream is active, the right-rail telemetry block transforms:
+
+- A **gradient backdrop** appears with a sweeping shimmer animation that traverses the panel every 2.4 seconds
+- The **TPOT/TTFT values** glow with the accent color and gain a text-shadow halo
+- A new **`● LIVE` readout** appears below the sparkline with a blinking dot and a real-time token counter that ticks up as the model emits
+- The block reverts to its calm static state the moment streaming completes
+
+Pure CSS — no JS animation cost, no extra renders.
 
 ---
 
@@ -291,15 +388,19 @@ A completely redesigned single-panel layout optimised for one-handed use:
 
 | Shortcut | Action |
 |----------|--------|
+| `Ctrl + P` | Open the Command Palette |
 | `Ctrl + N` | Create a new session |
 | `Ctrl + K` | Focus the session search input |
 | `Ctrl + E` | Export the active conversation as Markdown |
+| `Ctrl + M` | Open the Conversation Multiverse |
+| `Ctrl + I` | Open the Insights dashboard |
 | `Ctrl + /` | Open the keyboard shortcut guide |
+| `/` | Slash commands menu in the composer |
 | `Enter` | Send message |
 | `Shift + Enter` | New line in composer |
 | `Escape` | Stop streaming / close modal |
 
-The shortcut guide is also accessible via the **⌨** button in the status bar.
+The status bar exposes three icon buttons: **⌘** (Command Palette), **📊** (Insights), and **⌨** (this shortcut guide).
 
 ---
 
@@ -663,24 +764,33 @@ Aryabhata/
 │   ├── store/
 │   │   └── appStore.ts           # Zustand store (all state + actions, localStorage persist)
 │   ├── components/
-│   │   ├── TopBar.tsx            # Nav bar: breadcrumb, UTC + local clock, Clerk UserButton
-│   │   ├── Sidebar.tsx           # Mode tabs, model search, provider groups, session list (pinning)
-│   │   ├── RightRail.tsx         # Persona gallery, sampling controls (+ reset), telemetry, Arena
-│   │   ├── StatusBar.tsx         # Theme switcher, TTFT, SYS NOMINAL/ERR, token counter, ⌨ button
-│   │   ├── ChatMode.tsx          # Chat thread, Blend voting, fork, retry banner, carbon telemetry
+│   │   ├── TopBar.tsx            # Nav bar: breadcrumb (with conv DNA), clocks, Clerk UserButton
+│   │   ├── Sidebar.tsx           # Mode tabs, model search, provider groups, session list (pinning, DNA, multiverse btn)
+│   │   ├── RightRail.tsx         # Persona gallery, sampling, telemetry (with Live Streaming Theatre)
+│   │   ├── StatusBar.tsx         # Theme switcher, TTFT, SYS NOMINAL/ERR, ⌘ palette, 📊 insights, ⌨ shortcuts
+│   │   ├── ChatMode.tsx          # Chat thread, Blend voting, fork, retry banner, slash actions
 │   │   ├── CodeMode.tsx          # Monaco editor + AI assistant, ↓ Save button, retry banner
 │   │   ├── ImageMode.tsx         # Image generation UI with inline gallery
 │   │   ├── MessageBubble.tsx     # Message renderer (Markdown, telemetry, timestamp tooltip, vote)
-│   │   ├── ChatInput.tsx         # Composer (Enhance button, prompt library, image paste)
+│   │   ├── ChatInput.tsx         # Composer (Enhance, prompt library, image paste, slash menu, voice mic)
 │   │   ├── PersonaGallery.tsx    # 7 built-in + custom persona cards (create/delete inline)
+│   │   ├── CommandPalette.tsx    # ★ Ctrl+P fuzzy-search universal action UI
+│   │   ├── Multiverse.tsx        # ★ Ctrl+M conversation fork tree visualizer
+│   │   ├── Insights.tsx          # ★ Ctrl+I personal analytics dashboard
+│   │   ├── ConversationDNA.tsx   # ★ Generative SVG fingerprint component
+│   │   ├── SlashMenu.tsx         # ★ Live-filtered slash command suggestions popup
 │   │   ├── ErrorBoundary.tsx     # Full-screen fallback for unhandled component crashes
 │   │   ├── MobileNav.tsx         # Bottom nav bar (Models / Chat / Params / History)
-│   │   └── ContextMenu.tsx       # Right-click context menu anchored to cursor position
+│   │   └── ContextMenu.tsx       # Right-click context menu (createPortal to document.body)
 │   ├── hooks/
 │   │   ├── useAuthFetch.ts       # fetch() wrapper that injects Clerk Bearer token
-│   │   └── useStream.ts          # SSE streaming hook with TTFT / T/s / error callbacks
+│   │   ├── useStream.ts          # SSE streaming hook with TTFT / T/s / error callbacks
+│   │   └── useVoice.ts           # ★ Web Speech API hook (interim + final transcripts)
 │   ├── lib/
 │   │   ├── exportConversation.ts # Markdown export (used by sidebar + Ctrl+E)
+│   │   ├── dnaGenerator.ts       # ★ Deterministic SVG fingerprint algorithm (FNV-1a + LCG)
+│   │   ├── fuzzyMatch.ts         # ★ Positional fuzzy matcher for the Command Palette
+│   │   ├── slashCommands.ts      # ★ Slash command registry and dispatch
 │   │   └── utils.ts              # Date formatting, misc helpers
 │   ├── pages/
 │   │   ├── SignInPage.tsx         # Clerk <SignIn routing="path"> with branded theme

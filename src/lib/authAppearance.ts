@@ -76,7 +76,8 @@ export function buildAuthAppearance(theme: Theme) {
         height: '44px',
         border: `0.5px solid ${tint(c.accent, 0.22)}`,
         borderRadius: '6px',
-        background: tint(c.surface2, 0.55),
+        backgroundColor: tint(c.surface2, 0.55),
+        backgroundImage: 'none',
         color: c.ink,
         fontFamily: '"Inter", system-ui, sans-serif',
         fontSize: '13px',
@@ -85,12 +86,12 @@ export function buildAuthAppearance(theme: Theme) {
         alignItems: 'center' as const,
         justifyContent: 'center' as const,
         gap: '10px',
-        padding: '0 56px 0 14px',          // right padding leaves room for the "Last used" pill
+        padding: '0 14px',
         overflow: 'hidden',
-        transition: 'border-color 0.15s, background 0.15s, transform 0.1s',
+        transition: 'border-color 0.15s, background-color 0.15s, transform 0.1s',
         '&:hover': {
           borderColor: tint(c.accent, 0.5),
-          background: tint(c.accent, 0.06),
+          backgroundColor: tint(c.accent, 0.08),
         },
         '&:active': { transform: 'translateY(1px)' },
       },
@@ -101,41 +102,14 @@ export function buildAuthAppearance(theme: Theme) {
       },
       socialButtonsProviderIcon: { width: '16px', height: '16px' },
 
-      // "Last used" badge — pinned inside the button on the right edge
-      providerLastUsedLabel__google: {
-        position: 'absolute' as const,
-        right: '10px',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        fontFamily: FONT_MONO,
-        fontSize: '8.5px',
-        letterSpacing: '0.14em',
-        textTransform: 'uppercase' as const,
-        color: c.accent,
-        background: tint(c.accent, 0.14),
-        padding: '2px 7px',
-        borderRadius: '999px',
-        border: `0.5px solid ${tint(c.accent, 0.4)}`,
-        whiteSpace: 'nowrap' as const,
-        pointerEvents: 'none' as const,
-      },
-      providerLastUsedLabel: {
-        position: 'absolute' as const,
-        right: '10px',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        fontFamily: FONT_MONO,
-        fontSize: '8.5px',
-        letterSpacing: '0.14em',
-        textTransform: 'uppercase' as const,
-        color: c.accent,
-        background: tint(c.accent, 0.14),
-        padding: '2px 7px',
-        borderRadius: '999px',
-        border: `0.5px solid ${tint(c.accent, 0.4)}`,
-        whiteSpace: 'nowrap' as const,
-        pointerEvents: 'none' as const,
-      },
+      // "Last used" badge — Clerk renders this inconsistently across
+      // versions (sometimes inside the button, sometimes as a sibling),
+      // so we hide it. UX cost is minimal; layout stays clean.
+      providerLastUsedLabel:           { display: 'none' },
+      providerLastUsedLabel__google:   { display: 'none' },
+      providerLastUsedLabel__github:   { display: 'none' },
+      providerLastUsedLabel__discord:  { display: 'none' },
+      providerLastUsedLabel__apple:    { display: 'none' },
 
       // Divider
       dividerRow: {
@@ -215,12 +189,14 @@ export function buildAuthAppearance(theme: Theme) {
         },
       },
 
-      // Primary submit button
+      // Primary submit button — explicit backgroundColor (not bg
+      // shorthand) so Clerk's CSS-in-JS doesn't fight us.
       formButtonPrimary: {
         width: '100%',
         height: '44px',
-        marginTop: '6px',
-        background: c.accent,
+        marginTop: '4px',
+        backgroundColor: c.accent,
+        backgroundImage: 'none',
         color: c.bg,
         border: 'none',
         borderRadius: '6px',
@@ -233,7 +209,7 @@ export function buildAuthAppearance(theme: Theme) {
         boxShadow: `0 4px 14px ${tint(c.accent, 0.3)}`,
         transition: 'box-shadow 0.15s, filter 0.15s, transform 0.1s',
         '&:hover': {
-          background: c.accent,
+          backgroundColor: c.accent,
           filter: 'brightness(1.15)',
           boxShadow: `0 6px 22px ${tint(c.accent, 0.55)}`,
         },

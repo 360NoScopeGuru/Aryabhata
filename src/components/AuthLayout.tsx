@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { generateDNA } from '@/lib/dnaGenerator'
+import { useAppStore } from '@/store/appStore'
 
 interface Props {
   mode: 'signin' | 'signup'
@@ -60,6 +61,12 @@ function buildParticles(count: number): Particle[] {
 }
 
 export default function AuthLayout({ mode, children }: Props) {
+  // Apply persisted theme on auth routes (App.tsx never mounts here)
+  const theme = useAppStore(s => s.theme)
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
+
   // Boot-sequence typewriter
   const [bootStep, setBootStep] = useState(0)
 

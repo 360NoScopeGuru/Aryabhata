@@ -1945,22 +1945,27 @@ pre.code-block {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   padding: 7px 14px;
   font-size: 11px;
+  font-family: var(--mono);
   letter-spacing: .06em;
   color: var(--ink-dim);
   cursor: pointer;
   outline: none;
   user-select: none;
+  background: none;
+  border: none;
+  text-align: left;
   transition: background var(--trans), color var(--trans);
 }
-.ctx-item:hover, .ctx-item[data-highlighted] {
+.ctx-item:hover {
   background: var(--surface);
   color: var(--ink);
 }
-.ctx-item[data-disabled] { opacity: .35; pointer-events: none; }
+.ctx-item:disabled { opacity: .35; pointer-events: none; }
 .ctx-item-danger { color: var(--warn); }
-.ctx-item-danger:hover, .ctx-item-danger[data-highlighted] { background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--warn); }
+.ctx-item-danger:hover { background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--warn); }
 .ctx-sep { height: var(--border-w); background: var(--line-soft); margin: 4px 0; }
 .ctx-shortcut { font-size: 9px; letter-spacing: .1em; opacity: .45; margin-left: 16px; }
 

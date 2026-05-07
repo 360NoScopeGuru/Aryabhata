@@ -554,15 +554,17 @@ html, body, #root {
 
 .session-item {
   position: relative;
-  display: grid;
-  grid-template-columns: 26px 1fr;
-  gap: 0 9px;
-  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 28px 9px 12px; /* right padding leaves room for absolute .session-del */
   border-bottom: var(--border-w) solid var(--line-soft);
   cursor: pointer;
   transition: background var(--trans);
-  align-items: center;
 }
+.session-item > .session-glyph,
+.session-item > .session-dna,
+.session-item > .session-pin-icon { flex-shrink: 0; }
 .session-item:hover { background: var(--surface); }
 .session-item.active { background: var(--surface); }
 .session-item.active::before {
@@ -589,7 +591,7 @@ html, body, #root {
 .session-glyph.code  { border-color: rgba(74,255,168,.35); color: var(--ok); }
 .session-glyph.image { border-color: rgba(255,212,122,.35); color: var(--accent2); }
 
-.session-info { min-width: 0; }
+.session-info { flex: 1; min-width: 0; }
 .session-title {
   font-size: 12px;
   font-weight: 500;

@@ -408,6 +408,18 @@ The status bar exposes three icon buttons: **⌘** (Command Palette), **📊** (
 
 Authentication is handled by **Clerk**. Every API route on the backend requires a valid JWT, verified against Clerk's JWKS endpoint using PyJWT + the `cryptography` library (RS256/RS512). All database queries are scoped by `user_id`, so users can only read and modify their own data.
 
+#### Cinematic Auth Screen
+
+The sign-in and sign-up pages are a full immersive experience, not a bare Clerk widget:
+
+- **Animated orbital reticle** — rotating rings with tick marks, arc sweeps, and a pulsing core, rendered in SVG and driven entirely by CSS animations
+- **Boot sequence typewriter** — a 5-step terminal-style `[SYS] / [NET] / [DB] / [IDX] / [AUT]` system check animates line-by-line with a live UTC clock and blinking status indicator
+- **Drifting DNA particle field** — 7 randomly seeded conversation fingerprints drift across the background at varying speeds and opacities
+- **Registration corner marks** — four crosshair corner brackets frame the layout like an engineering viewport
+- **Stats ticker** — live stats strip (MODELS / THEMES / STREAMS / BLEND / CTX)
+- **Theme-aware form** — Clerk's appearance API is driven by `buildAuthAppearance(theme)` in `src/lib/authAppearance.ts`, resolving each theme's accent, ink, surface, and faint colors to literal hex values so Clerk inline styles match the active app theme
+- **Trust row** — `Clerk · RS256 JWT`, `Per-user isolation`, `NVIDIA NIM` micro-badges appear beneath the form card
+
 ---
 
 ### Error Handling & Resilience

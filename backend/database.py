@@ -118,3 +118,14 @@ async def init_db():
         await conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC)"
         )
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS shared_links (
+                token           TEXT PRIMARY KEY,
+                conversation_id TEXT NOT NULL,
+                user_id         TEXT NOT NULL,
+                created_at      TEXT NOT NULL
+            )
+        """)
+        await conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_shared_links_conv_id ON shared_links(conversation_id)"
+        )

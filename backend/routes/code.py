@@ -3,11 +3,13 @@ from fastapi.responses import StreamingResponse
 from models import CodeRequest
 from database import get_db
 from auth import get_current_user
+from rate_limit import RateLimit
 from openai import AsyncOpenAI
 import os, uuid, json, traceback
 from datetime import datetime, timezone
 
 router = APIRouter(tags=["code"])
+_code_limit = RateLimit("code")
 
 NVIDIA_BASE = "https://integrate.api.nvidia.com/v1"
 
@@ -22,7 +24,7 @@ CODE_SYSTEM = (
 )
 
 @router.post("/code/stream")
-async def code_stream(body: CodeRequest, _: str = Depends(get_current_user)):
+async def code_stream(body: CodeRequest, _: str = Depends(get_current_user), __: None = Depends(_code_limit)):
     model = body.model
     m = model.lower()
     if "mistral" in m or "mixtral" in m or "codestral" in m:

@@ -3,10 +3,13 @@ from fastapi.responses import StreamingResponse
 from models import ChatRequest, RouteRequest
 from database import get_db
 from auth import get_current_user
+from rate_limit import RateLimit
 from openai import AsyncOpenAI
 import os, uuid, json
 from datetime import datetime, timezone
 from pydantic import BaseModel
+
+_chat_limit = RateLimit("chat")
 
 router = APIRouter(tags=["chat"])
 
@@ -51,7 +54,7 @@ async def route_task(body: RouteRequest, _: str = Depends(get_current_user)):
     return {"mode": mode}
 
 @router.post("/chat/stream")
-async def chat_stream(body: ChatRequest, _: str = Depends(get_current_user)):
+async def chat_stream(body: ChatRequest, _: str = Depends(get_current_user), __: None = Depends(_chat_limit)):
     model = body.model
     api_key = get_api_key(model)
     client = AsyncOpenAI(base_url=NVIDIA_BASE, api_key=api_key)

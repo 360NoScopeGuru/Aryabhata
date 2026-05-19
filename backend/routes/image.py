@@ -2,12 +2,14 @@ from fastapi import APIRouter, HTTPException, Depends
 from models import ImageRequest, ALLOWED_IMAGE_MODELS
 from database import get_db
 from auth import get_current_user
+from rate_limit import RateLimit
 import os, uuid, httpx, asyncio
 import cloudinary
 import cloudinary.uploader
 from datetime import datetime, timezone
 
 router = APIRouter(tags=["image"])
+_image_limit = RateLimit("image")
 
 NVIDIA_GENAI_BASE = "https://ai.api.nvidia.com/v1/genai"
 
@@ -31,7 +33,7 @@ def _upload_to_cloudinary(b64: str, public_id: str) -> str:
     return result["secure_url"]
 
 @router.post("/image/generate")
-async def generate_image(body: ImageRequest, _: str = Depends(get_current_user)):
+async def generate_image(body: ImageRequest, _: str = Depends(get_current_user), __: None = Depends(_image_limit)):
     if body.model not in ALLOWED_IMAGE_MODELS:
         raise HTTPException(status_code=400, detail=f"Model not allowed: {body.model}")
     api_key = os.getenv("NVIDIA_API_KEY_IMAGE") or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CHAT")

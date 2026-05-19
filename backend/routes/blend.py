@@ -3,11 +3,13 @@ from fastapi.responses import StreamingResponse
 from models import BlendRequest
 from database import get_db
 from auth import get_current_user
+from rate_limit import RateLimit
 from openai import AsyncOpenAI
 import os, uuid, json, traceback
 from datetime import datetime, timezone
 
 router = APIRouter(tags=["blend"])
+_blend_limit = RateLimit("blend")
 
 NVIDIA_BASE = "https://integrate.api.nvidia.com/v1"
 
@@ -102,7 +104,7 @@ def build_collab_system(model_id: str, all_models: list, previous_responses: dic
 
 
 @router.post("/blend/stream")
-async def blend_stream(body: BlendRequest, _: str = Depends(get_current_user)):
+async def blend_stream(body: BlendRequest, _: str = Depends(get_current_user), __: None = Depends(_blend_limit)):
     models = body.models[:5]
 
     async def generate():

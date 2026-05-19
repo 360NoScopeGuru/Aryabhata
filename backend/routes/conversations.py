@@ -22,6 +22,26 @@ async def create_conversation(body: ConversationCreate, user_id: str = Depends(g
     return {"id": conv_id, "title": body.title, "mode": body.mode, "model": body.model}
 
 
+@router.get("/search")
+async def search_messages(q: str, user_id: str = Depends(get_current_user)):
+    if not q or len(q.strip()) < 2:
+        return []
+    async with get_db() as db:
+        rows = await db.fetchall(
+            """
+            SELECT m.id AS message_id, m.conversation_id, c.title AS conversation_title,
+                   m.role, m.content, m.created_at
+            FROM messages m
+            JOIN conversations c ON c.id = m.conversation_id
+            WHERE c.user_id = ? AND m.content ILIKE ?
+            ORDER BY m.created_at DESC
+            LIMIT 30
+            """,
+            (user_id, f"%{q.strip()}%"),
+        )
+    return rows
+
+
 @router.get("")
 async def list_conversations(user_id: str = Depends(get_current_user)):
     async with get_db() as db:

@@ -7,6 +7,7 @@ import App from './App.tsx'
 import ErrorBoundary from './components/ErrorBoundary.tsx'
 import SignInPage from './pages/SignInPage.tsx'
 import SignUpPage from './pages/SignUpPage.tsx'
+import SharePage from './pages/SharePage.tsx'
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -47,6 +48,7 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route path="/sign-in/*" element={<SignInPage />} />
             <Route path="/sign-up/*" element={<SignUpPage />} />
+            <Route path="/share/:token" element={<SharePage />} />
             <Route path="/*" element={<ProtectedApp />} />
           </Routes>
         </BrowserRouter>

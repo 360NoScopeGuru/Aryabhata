@@ -15,9 +15,28 @@ interface Props {
   onSlashAction?: (key: string) => void
 }
 
+const EXT_TO_LANG: Record<string, string> = {
+  ts: 'typescript', tsx: 'tsx', js: 'javascript', jsx: 'jsx',
+  py: 'python', rs: 'rust', go: 'go', java: 'java', cpp: 'cpp', c: 'c',
+  cs: 'csharp', rb: 'ruby', php: 'php', swift: 'swift', kt: 'kotlin',
+  json: 'json', yaml: 'yaml', yml: 'yaml', toml: 'toml', xml: 'xml',
+  html: 'html', css: 'css', scss: 'scss', sh: 'bash', bash: 'bash',
+  md: 'markdown', txt: '', csv: 'text', sql: 'sql',
+}
+
+const MAX_FILE_BYTES = 100 * 1024  // 100 KB
+
+interface AttachedFile {
+  name: string
+  content: string
+  lang: string
+}
+
 export default function ChatInput({ onSend, onStop, streaming, placeholder, disabled, onSlashAction }: Props) {
   const [value, setValue] = useState('')
   const [pastedImage, setPastedImage] = useState<string | null>(null)
+  const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [promptsOpen, setPromptsOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveTitle, setSaveTitle] = useState('')
@@ -123,6 +142,24 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
     }
   }
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > MAX_FILE_BYTES) {
+      addToast({ kind: 'error', message: `FILE TOO LARGE · max 100 KB` })
+      e.target.value = ''
+      return
+    }
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+    const lang = EXT_TO_LANG[ext] ?? ''
+    const reader = new FileReader()
+    reader.onload = ev => {
+      setAttachedFile({ name: file.name, content: ev.target?.result as string, lang })
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
+
   const handleSend = () => {
     // If a slash transform command is fully typed, apply it
     if (slashActive && slashMatches.length > 0) {
@@ -133,10 +170,16 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
       }
     }
     const trimmed = value.trim()
-    if ((!trimmed && !pastedImage) || disabled) return
-    onSend(trimmed || 'What is in this image?', pastedImage ?? undefined)
+    if ((!trimmed && !pastedImage && !attachedFile) || disabled) return
+    let payload = trimmed
+    if (attachedFile) {
+      const fence = attachedFile.lang ? `\`\`\`${attachedFile.lang}` : '```'
+      payload = `${attachedFile.name}:\n${fence}\n${attachedFile.content}\n\`\`\`${payload ? '\n\n' + payload : ''}`
+    }
+    onSend(payload || 'What is in this image?', pastedImage ?? undefined)
     setValue('')
     setPastedImage(null)
+    setAttachedFile(null)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }
 
@@ -183,7 +226,7 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
   }
 
   const noModel = mode !== 'image' && selectedModels.length === 0
-  const canSend = (value.trim() || pastedImage) && !disabled && !streaming && !noModel
+  const canSend = (value.trim() || pastedImage || attachedFile) && !disabled && !streaming && !noModel
   const blend = isBlendMode(selectedModels)
   const activeModelId = mode !== 'image' ? getActiveModel(selectedModels) : null
   const activeModel = activeModelId && !noModel ? MIXING_MODELS.find(m => m.id === activeModelId) : null
@@ -214,6 +257,15 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
           {pastedImage && (
             <span className="composer-pill" style={{ color: 'var(--accent2)', borderColor: 'rgba(255,212,122,.3)' }}>
               Image attached
+            </span>
+          )}
+          {attachedFile && (
+            <span className="composer-pill" style={{ color: 'var(--ok)', borderColor: 'rgba(0,255,65,.25)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              📎 {attachedFile.name}
+              <button
+                style={{ background: 'none', border: 'none', color: 'var(--ink-faint)', cursor: 'pointer', padding: 0, fontSize: '10px', lineHeight: 1 }}
+                onClick={() => setAttachedFile(null)}
+              >✕</button>
             </span>
           )}
 
@@ -321,6 +373,19 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, disa
             CTRL+V paste · "/" for commands
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.md,.py,.js,.ts,.jsx,.tsx,.json,.csv,.yaml,.yml,.toml,.html,.css,.scss,.sh,.rs,.go,.java,.c,.cpp,.cs,.rb,.php,.swift,.kt,.sql,.xml"
+              style={{ display: 'none' }}
+              onChange={handleFileSelect}
+            />
+            <button
+              className="mic-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={streaming || noModel}
+              title="Attach a file (text / code, max 100 KB)"
+            >📎</button>
             {voice.supported && (
               <button
                 className={`mic-btn ${voice.listening ? 'listening' : ''}`}

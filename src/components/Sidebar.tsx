@@ -25,6 +25,11 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
   const [query, setQuery] = useState('')
   const [modelQuery, setModelQuery] = useState('')
   const [ctxMenu, setCtxMenu] = useState<{ id: string; x: number; y: number } | null>(null)
+  const [msgSearchOpen, setMsgSearchOpen] = useState(false)
+  const [msgQuery, setMsgQuery] = useState('')
+  const [msgResults, setMsgResults] = useState<{ message_id: string; conversation_id: string; conversation_title: string; role: string; content: string; created_at: string }[]>([])
+  const [msgSearching, setMsgSearching] = useState(false)
+  const msgDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const renameInputRef = useRef<HTMLInputElement>(null)
@@ -70,6 +75,20 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
         body: JSON.stringify({ title: trimmed }),
       })
     } catch {}
+  }
+
+  const handleMsgQueryChange = (q: string) => {
+    setMsgQuery(q)
+    if (msgDebounceRef.current) clearTimeout(msgDebounceRef.current)
+    if (!q.trim() || q.trim().length < 2) { setMsgResults([]); return }
+    msgDebounceRef.current = setTimeout(async () => {
+      setMsgSearching(true)
+      try {
+        const res = await authFetch(`/api/conversations/search?q=${encodeURIComponent(q.trim())}`)
+        if (res.ok) setMsgResults(await res.json())
+      } catch {}
+      setMsgSearching(false)
+    }, 300)
   }
 
   const openCtx = (e: React.MouseEvent, id: string) => {
@@ -207,7 +226,45 @@ export default function Sidebar({ onNewChat, onSelectConversation, onDeleteConve
           value={query}
           onChange={e => setQuery(e.target.value)}
         />
+        <button
+          className={`msg-search-toggle ${msgSearchOpen ? 'active' : ''}`}
+          onClick={() => { setMsgSearchOpen(o => !o); setMsgQuery(''); setMsgResults([]) }}
+          title="Search inside messages"
+        >⌕</button>
       </div>
+
+      {msgSearchOpen && (
+        <div className="msg-search-panel">
+          <input
+            className="search-input"
+            type="search"
+            placeholder="Search message content…"
+            value={msgQuery}
+            onChange={e => handleMsgQueryChange(e.target.value)}
+            autoFocus
+          />
+          {msgSearching && (
+            <div className="msg-search-status">searching…</div>
+          )}
+          {!msgSearching && msgQuery.trim().length >= 2 && msgResults.length === 0 && (
+            <div className="msg-search-status">No results</div>
+          )}
+          {msgResults.map(r => (
+            <div
+              key={r.message_id}
+              className="msg-search-result"
+              onClick={() => {
+                const conv = conversations.find(c => c.id === r.conversation_id)
+                if (conv) { onSelectConversation(conv); setMsgSearchOpen(false); setMsgQuery(''); setMsgResults([]) }
+              }}
+            >
+              <div className="msg-search-conv">{r.conversation_title}</div>
+              <div className={`msg-search-role ${r.role}`}>{r.role === 'assistant' ? 'A' : 'U'}</div>
+              <div className="msg-search-snippet">{r.content.slice(0, 120)}{r.content.length > 120 ? '…' : ''}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="session-list">
         {filtered.length === 0 && (

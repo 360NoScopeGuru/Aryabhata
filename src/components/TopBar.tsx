@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { UserButton } from '@clerk/clerk-react'
 import { dark } from '@clerk/themes'
 import { useAppStore } from '@/store/appStore'
+import { useAuthFetch } from '@/hooks/useAuthFetch'
 import ConversationDNA from './ConversationDNA'
 
 function UTCClock() {
@@ -28,8 +29,27 @@ function LocalClock() {
 }
 
 export default function TopBar() {
-  const { conversations, activeConversationId, projectName, threadCount } = useAppStore()
+  const { conversations, activeConversationId, projectName, threadCount, addToast } = useAppStore()
   const activeConv = conversations.find(c => c.id === activeConversationId)
+  const authFetch = useAuthFetch()
+  const [sharing, setSharing] = useState(false)
+
+  const handleShare = async () => {
+    if (!activeConv || sharing) return
+    setSharing(true)
+    try {
+      const res = await authFetch(`/api/conversations/${activeConv.id}/share`, { method: 'POST' })
+      if (!res.ok) throw new Error()
+      const { token } = await res.json()
+      const url = `${window.location.origin}/share/${token}`
+      await navigator.clipboard.writeText(url)
+      addToast({ kind: 'ok', message: 'SHARE LINK COPIED' })
+    } catch {
+      addToast({ kind: 'error', message: 'SHARE FAILED' })
+    } finally {
+      setSharing(false)
+    }
+  }
 
   return (
     <header className="topbar">
@@ -48,6 +68,14 @@ export default function TopBar() {
               <span className="crumb-active" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
                 {activeConv.title}
               </span>
+              <button
+                className="topbar-share-btn"
+                onClick={handleShare}
+                disabled={sharing}
+                title="Copy shareable link to clipboard"
+              >
+                {sharing ? '…' : '⤴ Share'}
+              </button>
             </>
           )}
         </div>

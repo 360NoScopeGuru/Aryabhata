@@ -1,0 +1,17 @@
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# E501: line length, not worth enforcing here.
+# B008: FastAPI's Depends()-in-default-args is the framework's own DI idiom, not a bug.
+ignore = ["E501", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# load_dotenv() must run before other modules are imported, since some read
+# env vars at import time — the import-order violation here is intentional.
+"main.py" = ["E402"]
+
+[tool.ruff.format]
+quote-style = "double"

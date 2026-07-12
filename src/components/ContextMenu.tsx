@@ -26,7 +26,7 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
   const estW = 200
   const estH = items.length * 34
   const left = Math.min(x, vw - estW - 8)
-  const top  = Math.min(y, vh - estH - 8)
+  const top = Math.min(y, vh - estH - 8)
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -50,7 +50,7 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
       ref={menuRef}
       className="ctx-menu"
       style={{ position: 'fixed', top, left, zIndex: 9999 }}
-      onMouseDown={e => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       {items.map((item, i) =>
         item.separator ? (
@@ -60,12 +60,15 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
             key={i}
             className={`ctx-item${item.danger ? ' ctx-item-danger' : ''}`}
             disabled={item.disabled}
-            onClick={() => { item.onSelect(); onClose() }}
+            onClick={() => {
+              item.onSelect()
+              onClose()
+            }}
           >
             <span>{item.label}</span>
             {item.shortcut && <span className="ctx-shortcut">{item.shortcut}</span>}
           </button>
-        )
+        ),
       )}
     </div>,
     document.body,

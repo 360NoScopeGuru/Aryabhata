@@ -1,20 +1,27 @@
+import json
+import os
+import traceback
+import uuid
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from models import CodeRequest
-from database import get_db
-from auth import get_current_user
-from rate_limit import RateLimit
 from openai import AsyncOpenAI
-import os, uuid, json, traceback
-from datetime import datetime, timezone
+
+from auth import get_current_user
+from database import get_db
+from models import CodeRequest
+from rate_limit import RateLimit
 
 router = APIRouter(tags=["code"])
 _code_limit = RateLimit("code")
 
 NVIDIA_BASE = "https://integrate.api.nvidia.com/v1"
 
+
 def now():
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
+
 
 CODE_SYSTEM = (
     "You are an expert programming assistant. "
@@ -23,16 +30,25 @@ CODE_SYSTEM = (
     "Explain your approach briefly before the code."
 )
 
+
 @router.post("/code/stream")
 async def code_stream(body: CodeRequest, _: str = Depends(get_current_user), __: None = Depends(_code_limit)):
     model = body.model
     m = model.lower()
     if "mistral" in m or "mixtral" in m or "codestral" in m:
-        api_key = os.getenv("NVIDIA_API_KEY_MISTRAL") or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CODE")
+        api_key = (
+            os.getenv("NVIDIA_API_KEY_MISTRAL")
+            or os.getenv("NVIDIA_API_KEY")
+            or os.getenv("NVIDIA_API_KEY_CODE")
+        )
     elif "405b" in m:
         api_key = os.getenv("NVIDIA_API_KEY_CODE") or os.getenv("NVIDIA_API_KEY")
     else:
-        api_key = os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CODE") or os.getenv("NVIDIA_API_KEY_CHAT")
+        api_key = (
+            os.getenv("NVIDIA_API_KEY")
+            or os.getenv("NVIDIA_API_KEY_CODE")
+            or os.getenv("NVIDIA_API_KEY_CHAT")
+        )
     client = AsyncOpenAI(base_url=NVIDIA_BASE, api_key=api_key)
 
     msg_id = str(uuid.uuid4())
@@ -44,8 +60,9 @@ async def code_stream(body: CodeRequest, _: str = Depends(get_current_user), __:
     if body.system_prompt:
         system_msg += f"\n\n{body.system_prompt}"
 
-    messages = [{"role": "system", "content": system_msg}] + \
-               [{"role": m.role, "content": m.content} for m in body.messages]
+    messages = [{"role": "system", "content": system_msg}] + [
+        {"role": m.role, "content": m.content} for m in body.messages
+    ]
 
     create_kwargs = dict(
         model=model,
@@ -85,15 +102,23 @@ async def code_stream(body: CodeRequest, _: str = Depends(get_current_user), __:
                 user_msg = body.messages[-1]
                 await db.execute(
                     "INSERT INTO messages (id,conversation_id,role,content,mode,model,created_at) VALUES (?,?,?,?,?,?,?)",
-                    (str(uuid.uuid4()), body.conversation_id, user_msg.role, user_msg.content, "code", model, now())
+                    (
+                        str(uuid.uuid4()),
+                        body.conversation_id,
+                        user_msg.role,
+                        user_msg.content,
+                        "code",
+                        model,
+                        now(),
+                    ),
                 )
                 await db.execute(
                     "INSERT INTO messages (id,conversation_id,role,content,mode,model,created_at) VALUES (?,?,?,?,?,?,?)",
-                    (msg_id, body.conversation_id, "assistant", full_text, "code", model, now())
+                    (msg_id, body.conversation_id, "assistant", full_text, "code", model, now()),
                 )
                 await db.execute(
                     "UPDATE conversations SET updated_at=?, model=? WHERE id=?",
-                    (now(), model, body.conversation_id)
+                    (now(), model, body.conversation_id),
                 )
                 await db.commit()
         except Exception:

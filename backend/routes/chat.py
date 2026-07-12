@@ -1,13 +1,17 @@
+import json
+import os
+import uuid
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from models import ChatRequest, RouteRequest
-from database import get_db
-from auth import get_current_user
-from rate_limit import RateLimit
 from openai import AsyncOpenAI
-import os, uuid, json
-from datetime import datetime, timezone
 from pydantic import BaseModel
+
+from auth import get_current_user
+from database import get_db
+from models import ChatRequest, RouteRequest
+from rate_limit import RateLimit
 
 _chat_limit = RateLimit("chat")
 
@@ -16,42 +20,58 @@ router = APIRouter(tags=["chat"])
 NVIDIA_BASE = "https://integrate.api.nvidia.com/v1"
 ROUTER_MODEL = "meta/llama-3.1-8b-instruct"
 
+
 def now():
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
+
 
 def get_api_key(model: str) -> str:
     m = model.lower()
     if "mistral" in m or "mixtral" in m or "codestral" in m:
-        return os.getenv("NVIDIA_API_KEY_MISTRAL") or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CHAT")
+        return (
+            os.getenv("NVIDIA_API_KEY_MISTRAL")
+            or os.getenv("NVIDIA_API_KEY")
+            or os.getenv("NVIDIA_API_KEY_CHAT")
+        )
     if "405b" in m:
-        return os.getenv("NVIDIA_API_KEY_CODE") or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CHAT")
+        return (
+            os.getenv("NVIDIA_API_KEY_CODE")
+            or os.getenv("NVIDIA_API_KEY")
+            or os.getenv("NVIDIA_API_KEY_CHAT")
+        )
     return os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CHAT") or os.getenv("NVIDIA_API_KEY_CODE")
+
 
 async def detect_mode(prompt: str) -> str:
     api_key = os.getenv("NVIDIA_API_KEY_ROUTER")
     client = AsyncOpenAI(base_url=NVIDIA_BASE, api_key=api_key)
     resp = await client.chat.completions.create(
         model=ROUTER_MODEL,
-        messages=[{
-            "role": "system",
-            "content": (
-                "You are a task router. Given a user message, reply with exactly one word: "
-                "'chat', 'code', or 'image'. "
-                "'code' if the user wants to write, debug, explain, or review code. "
-                "'image' if the user wants to generate, draw, or create an image. "
-                "'chat' for everything else."
-            )
-        }, {"role": "user", "content": prompt}],
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a task router. Given a user message, reply with exactly one word: "
+                    "'chat', 'code', or 'image'. "
+                    "'code' if the user wants to write, debug, explain, or review code. "
+                    "'image' if the user wants to generate, draw, or create an image. "
+                    "'chat' for everything else."
+                ),
+            },
+            {"role": "user", "content": prompt},
+        ],
         max_tokens=5,
         temperature=0.0,
     )
     result = resp.choices[0].message.content.strip().lower()
     return result if result in ("chat", "code", "image") else "chat"
 
+
 @router.post("/route")
 async def route_task(body: RouteRequest, _: str = Depends(get_current_user)):
     mode = await detect_mode(body.prompt)
     return {"mode": mode}
+
 
 @router.post("/chat/stream")
 async def chat_stream(body: ChatRequest, _: str = Depends(get_current_user), __: None = Depends(_chat_limit)):
@@ -90,6 +110,7 @@ async def chat_stream(body: ChatRequest, _: str = Depends(get_current_user), __:
                     yield f"data: {json.dumps({'delta': delta})}\n\n"
         except Exception as e:
             import traceback
+
             traceback.print_exc()
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
             return
@@ -101,19 +122,28 @@ async def chat_stream(body: ChatRequest, _: str = Depends(get_current_user), __:
                 user_msg = body.messages[-1]
                 await db.execute(
                     "INSERT INTO messages (id,conversation_id,role,content,mode,model,created_at) VALUES (?,?,?,?,?,?,?)",
-                    (str(uuid.uuid4()), body.conversation_id, user_msg.role, user_msg.content, "chat", model, now())
+                    (
+                        str(uuid.uuid4()),
+                        body.conversation_id,
+                        user_msg.role,
+                        user_msg.content,
+                        "chat",
+                        model,
+                        now(),
+                    ),
                 )
                 await db.execute(
                     "INSERT INTO messages (id,conversation_id,role,content,mode,model,created_at) VALUES (?,?,?,?,?,?,?)",
-                    (msg_id, body.conversation_id, "assistant", full_text, "chat", model, now())
+                    (msg_id, body.conversation_id, "assistant", full_text, "chat", model, now()),
                 )
                 await db.execute(
                     "UPDATE conversations SET updated_at=?, model=? WHERE id=?",
-                    (now(), model, body.conversation_id)
+                    (now(), model, body.conversation_id),
                 )
                 await db.commit()
         except Exception:
             import traceback
+
             traceback.print_exc()
 
         yield f"data: {json.dumps({'done': True, 'id': msg_id, 'output_tokens': output_tokens})}\n\n"
@@ -125,6 +155,7 @@ class NameRequest(BaseModel):
     conversation_id: str
     first_message: str
 
+
 @router.post("/chat/name")
 async def name_conversation(body: NameRequest, _: str = Depends(get_current_user)):
     api_key = os.getenv("NVIDIA_API_KEY_ROUTER")
@@ -132,21 +163,24 @@ async def name_conversation(body: NameRequest, _: str = Depends(get_current_user
     try:
         resp = await client.chat.completions.create(
             model=ROUTER_MODEL,
-            messages=[{
-                "role": "system",
-                "content": (
-                    "Generate a short, descriptive title (4-6 words) for a conversation that starts with the given message. "
-                    "Reply with ONLY the title, no quotes, no punctuation at the end."
-                )
-            }, {"role": "user", "content": body.first_message[:500]}],
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Generate a short, descriptive title (4-6 words) for a conversation that starts with the given message. "
+                        "Reply with ONLY the title, no quotes, no punctuation at the end."
+                    ),
+                },
+                {"role": "user", "content": body.first_message[:500]},
+            ],
             max_tokens=20,
             temperature=0.7,
         )
-        title = resp.choices[0].message.content.strip().strip('"\'')
+        title = resp.choices[0].message.content.strip().strip("\"'")
         async with get_db() as db:
             await db.execute(
                 "UPDATE conversations SET title=?, updated_at=? WHERE id=?",
-                (title, now(), body.conversation_id)
+                (title, now(), body.conversation_id),
             )
             await db.commit()
         return {"title": title}

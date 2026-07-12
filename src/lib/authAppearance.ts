@@ -1,27 +1,57 @@
 import { dark } from '@clerk/themes'
+
 import type { Theme } from '@/store/appStore'
 
 // Resolved hex values per theme — Clerk's appearance API takes literal
 // color strings, not CSS variables, because it applies them as inline
 // styles (highest cascade priority, beats both Clerk defaults and our
 // global CSS).
-const THEME_COLORS: Record<Theme, { accent: string; ink: string; bg: string; surface2: string; faint: string }> = {
-  cad:    { accent: '#b44dff', ink: '#e2eaf5', bg: '#07040f', surface2: '#16101e', faint: '#8a9bb8' },
-  orbit:  { accent: '#ff6b1a', ink: '#fce8d4', bg: '#0f0800', surface2: '#1a0f08', faint: '#a08a76' },
-  brutal: { accent: '#0066ff', ink: '#0a1633', bg: '#f4f8ff', surface2: '#e8eef9', faint: '#6b7a99' },
-  liquid: { accent: '#00ff41', ink: '#caffd6', bg: '#020d02', surface2: '#0a1808', faint: '#7ab088' },
-  prism:  { accent: '#e0198c', ink: '#3d0a26', bg: '#fff0f8', surface2: '#fce4ed', faint: '#aa6080' },
+const THEME_COLORS: Record<
+  Theme,
+  { accent: string; ink: string; bg: string; surface2: string; faint: string }
+> = {
+  cad: { accent: '#b44dff', ink: '#e2eaf5', bg: '#07040f', surface2: '#16101e', faint: '#8a9bb8' },
+  orbit: {
+    accent: '#ff6b1a',
+    ink: '#fce8d4',
+    bg: '#0f0800',
+    surface2: '#1a0f08',
+    faint: '#a08a76',
+  },
+  brutal: {
+    accent: '#0066ff',
+    ink: '#0a1633',
+    bg: '#f4f8ff',
+    surface2: '#e8eef9',
+    faint: '#6b7a99',
+  },
+  liquid: {
+    accent: '#00ff41',
+    ink: '#caffd6',
+    bg: '#020d02',
+    surface2: '#0a1808',
+    faint: '#7ab088',
+  },
+  prism: {
+    accent: '#e0198c',
+    ink: '#3d0a26',
+    bg: '#fff0f8',
+    surface2: '#fce4ed',
+    faint: '#aa6080',
+  },
 }
 
-const FONT_MONO =
-  '"JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace'
+const FONT_MONO = '"JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace'
 
 export function buildAuthAppearance(theme: Theme) {
   const c = THEME_COLORS[theme]
 
   // Helper for translucent layers
   const tint = (color: string, alpha: number) =>
-    `${color}${Math.round(alpha * 255).toString(16).padStart(2, '0').slice(0, 2)}`
+    `${color}${Math.round(alpha * 255)
+      .toString(16)
+      .padStart(2, '0')
+      .slice(0, 2)}`
 
   return {
     baseTheme: dark,
@@ -105,11 +135,11 @@ export function buildAuthAppearance(theme: Theme) {
       // "Last used" badge — Clerk renders this inconsistently across
       // versions (sometimes inside the button, sometimes as a sibling),
       // so we hide it. UX cost is minimal; layout stays clean.
-      providerLastUsedLabel:           { display: 'none' },
-      providerLastUsedLabel__google:   { display: 'none' },
-      providerLastUsedLabel__github:   { display: 'none' },
-      providerLastUsedLabel__discord:  { display: 'none' },
-      providerLastUsedLabel__apple:    { display: 'none' },
+      providerLastUsedLabel: { display: 'none' },
+      providerLastUsedLabel__google: { display: 'none' },
+      providerLastUsedLabel__github: { display: 'none' },
+      providerLastUsedLabel__discord: { display: 'none' },
+      providerLastUsedLabel__apple: { display: 'none' },
 
       // Divider
       dividerRow: {

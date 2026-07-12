@@ -1,8 +1,10 @@
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException
-from database import get_db
+
 from auth import get_current_user
+from database import get_db
 from rate_limit import RateLimitByIP
 
 router = APIRouter(tags=["sharing"])
@@ -12,11 +14,11 @@ _share_read_limit = RateLimitByIP("share_read", max_reqs=30, window=60)
 
 
 def now():
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _expiry():
-    return (datetime.now(timezone.utc) + timedelta(days=SHARE_LINK_TTL_DAYS)).isoformat()
+    return (datetime.now(UTC) + timedelta(days=SHARE_LINK_TTL_DAYS)).isoformat()
 
 
 @router.post("/conversations/{conv_id}/share")

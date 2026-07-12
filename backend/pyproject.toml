@@ -15,3 +15,14 @@ ignore = ["E501", "B008"]
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# Session-scoped so the asyncpg pool (a module-level singleton) stays bound
+# to one event loop across the whole test run instead of being torn down
+# and reconnected per test.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+
+[tool.coverage.run]
+omit = ["tests/*", ".venv/*"]

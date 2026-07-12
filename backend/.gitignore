@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 studio.db
 .venv/
+.coverage
+.pytest_cache/
+htmlcov/

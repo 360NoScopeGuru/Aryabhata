@@ -16,6 +16,7 @@
 **A multi-model AI studio with streaming inference, Blend mode, code editing, image generation, Arena voting, Persona Gallery, Prompt Enhancer, Command Palette, slash commands, voice input, generative conversation fingerprints, fork tree visualization, personal analytics, and per-user persistence — built on NVIDIA NIM.**
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-aryabhata--rkfm.onrender.com-5eb8ff?style=for-the-badge&logo=render&logoColor=white)](https://aryabhata-rkfm.onrender.com)
+[![CI](https://github.com/360NoScopeGuru/Aryabhata/actions/workflows/ci.yml/badge.svg)](https://github.com/360NoScopeGuru/Aryabhata/actions/workflows/ci.yml)
 [![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react)](https://react.dev)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)

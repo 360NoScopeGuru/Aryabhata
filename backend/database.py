@@ -1,6 +1,7 @@
 import asyncpg
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 _pool: asyncpg.Pool | None = None
 
@@ -44,7 +45,7 @@ async def _get_pool() -> asyncpg.Pool:
         dsn = url.split('?')[0]
         _pool = await asyncpg.create_pool(
             dsn,
-            ssl='require',
+            ssl=os.getenv("DB_SSL_MODE", "require"),  # "disable" for local/CI Postgres containers
             statement_cache_size=0,  # required for Neon pooler (PgBouncer)
             min_size=1,
             max_size=5,
@@ -128,4 +129,13 @@ async def init_db():
         """)
         await conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_shared_links_conv_id ON shared_links(conversation_id)"
+        )
+        await conn.execute(
+            "ALTER TABLE shared_links ADD COLUMN IF NOT EXISTS expires_at TEXT"
+        )
+        # Links created before the expiry policy existed have no expires_at yet.
+        # Retroactively expire them now rather than grandfathering (owner decision).
+        await conn.execute(
+            "UPDATE shared_links SET expires_at = $1 WHERE expires_at IS NULL",
+            datetime.now(timezone.utc).isoformat(),
         )

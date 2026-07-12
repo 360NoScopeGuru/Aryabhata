@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -9,9 +10,17 @@ from database import init_db
 from routes import chat, code, image, conversations, blend, prompt, arena, sharing
 import os
 
+logger = logging.getLogger("uvicorn.error")
+
 app = FastAPI(title="Aryabhata API")
 
-_allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+_allowed_origins = [o.strip() for o in _origins_env.split(",") if o.strip()]
+if not _allowed_origins:
+    logger.warning(
+        "ALLOWED_ORIGINS is not set — CORS will reject all cross-origin requests. "
+        "Set ALLOWED_ORIGINS to your frontend origin(s) (comma-separated)."
+    )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,

@@ -1,14 +1,17 @@
 from dotenv import load_dotenv
+
 load_dotenv()
 
 import logging
+import os
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pathlib import Path
+
 from database import init_db
-from routes import chat, code, image, conversations, blend, prompt, arena, sharing
-import os
+from routes import arena, blend, chat, code, conversations, image, prompt, sharing
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -38,17 +41,21 @@ app.include_router(prompt.router, prefix="/api")
 app.include_router(arena.router, prefix="/api")
 app.include_router(sharing.router, prefix="/api")
 
+
 @app.on_event("startup")
 async def startup():
     await init_db()
+
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
 
+
 # Serve the built React app in production
 DIST_DIR = Path(__file__).parent.parent / "dist"
 if DIST_DIR.exists():
+
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
         file = DIST_DIR / full_path

@@ -1,9 +1,10 @@
-import os
 import datetime
+import os
+
 import jwt
-from jwt import PyJWKClient
 from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jwt import PyJWKClient
 
 bearer_scheme = HTTPBearer()
 _jwks_client: PyJWKClient | None = None
@@ -66,4 +67,4 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_
             return data["sub"]
         except Exception as e2:
             print(f"[auth] attempt 2 failed ({type(e2).__name__}: {e2})")
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
+            raise HTTPException(status_code=401, detail="Invalid or expired token") from e2

@@ -1,11 +1,13 @@
-from collections import defaultdict, deque
 import time
+from collections import defaultdict, deque
+
 from fastapi import Depends, HTTPException, Request
+
 from auth import get_current_user
 
 _LIMITS: dict[str, tuple[int, int]] = {
-    "chat":  (60, 60),
-    "code":  (60, 60),
+    "chat": (60, 60),
+    "code": (60, 60),
     "image": (10, 60),
     "blend": (30, 60),
 }

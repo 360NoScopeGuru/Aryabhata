@@ -1,34 +1,36 @@
-from fastapi import APIRouter, Depends
-from models import VoteRequest
-from database import get_db
-from auth import get_current_user
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Depends
+
+from auth import get_current_user
+from database import get_db
+from models import VoteRequest
 
 router = APIRouter(tags=["arena"])
 
+
 def now():
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 @router.post("/arena/vote")
 async def cast_vote(body: VoteRequest, user_id: str = Depends(get_current_user)):
     async with get_db() as db:
         conv = await db.fetchone(
-            "SELECT id FROM conversations WHERE id=? AND user_id=?",
-            (body.conv_id, user_id)
+            "SELECT id FROM conversations WHERE id=? AND user_id=?", (body.conv_id, user_id)
         )
         if not conv:
             return {"ok": False, "already_voted": False}
         existing = await db.fetchone(
             "SELECT id FROM votes WHERE user_id=? AND conv_id=? AND prompt_hash=?",
-            (user_id, body.conv_id, body.prompt_hash)
+            (user_id, body.conv_id, body.prompt_hash),
         )
         if existing:
             return {"ok": True, "already_voted": True}
         await db.execute(
             "INSERT INTO votes (id, user_id, conv_id, msg_id, model_id, prompt_hash, created_at) VALUES (?,?,?,?,?,?,?)",
-            (str(uuid.uuid4()), user_id, body.conv_id, body.msg_id, body.model_id, body.prompt_hash, now())
+            (str(uuid.uuid4()), user_id, body.conv_id, body.msg_id, body.model_id, body.prompt_hash, now()),
         )
     return {"ok": True, "already_voted": False}
 
@@ -46,11 +48,10 @@ async def get_leaderboard(user_id: str = Depends(get_current_user)):
             GROUP BY model_id
             ORDER BY wins DESC
             """,
-            (user_id,)
+            (user_id,),
         )
         total_row = await db.fetchone(
-            "SELECT COUNT(DISTINCT prompt_hash || conv_id) AS total FROM votes WHERE user_id=?",
-            (user_id,)
+            "SELECT COUNT(DISTINCT prompt_hash || conv_id) AS total FROM votes WHERE user_id=?", (user_id,)
         )
     total = total_row["total"] if total_row else 0
     return [

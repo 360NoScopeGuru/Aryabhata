@@ -1,10 +1,11 @@
 import { SignUp } from '@clerk/clerk-react'
-import { useAppStore } from '@/store/appStore'
-import { buildAuthAppearance } from '@/lib/authAppearance'
+
 import AuthLayout from '@/components/AuthLayout'
+import { buildAuthAppearance } from '@/lib/authAppearance'
+import { useAppStore } from '@/store/appStore'
 
 export default function SignUpPage() {
-  const theme = useAppStore(s => s.theme)
+  const theme = useAppStore((s) => s.theme)
   const appearance = buildAuthAppearance(theme)
 
   return (

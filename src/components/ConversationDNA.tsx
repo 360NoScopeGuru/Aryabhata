@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+
 import { generateDNA } from '@/lib/dnaGenerator'
 
 interface Props {

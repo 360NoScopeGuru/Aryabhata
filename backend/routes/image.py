@@ -1,12 +1,17 @@
-from fastapi import APIRouter, HTTPException, Depends
-from models import ImageRequest, ALLOWED_IMAGE_MODELS
-from database import get_db
-from auth import get_current_user
-from rate_limit import RateLimit
-import os, uuid, httpx, asyncio
+import asyncio
+import os
+import uuid
+from datetime import UTC, datetime
+
 import cloudinary
 import cloudinary.uploader
-from datetime import datetime, timezone
+import httpx
+from fastapi import APIRouter, Depends, HTTPException
+
+from auth import get_current_user
+from database import get_db
+from models import ALLOWED_IMAGE_MODELS, ImageRequest
+from rate_limit import RateLimit
 
 router = APIRouter(tags=["image"])
 _image_limit = RateLimit("image")
@@ -20,8 +25,10 @@ cloudinary.config(
     secure=True,
 )
 
+
 def now():
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
+
 
 def _upload_to_cloudinary(b64: str, public_id: str) -> str:
     result = cloudinary.uploader.upload(
@@ -32,11 +39,16 @@ def _upload_to_cloudinary(b64: str, public_id: str) -> str:
     )
     return result["secure_url"]
 
+
 @router.post("/image/generate")
-async def generate_image(body: ImageRequest, _: str = Depends(get_current_user), __: None = Depends(_image_limit)):
+async def generate_image(
+    body: ImageRequest, _: str = Depends(get_current_user), __: None = Depends(_image_limit)
+):
     if body.model not in ALLOWED_IMAGE_MODELS:
         raise HTTPException(status_code=400, detail=f"Model not allowed: {body.model}")
-    api_key = os.getenv("NVIDIA_API_KEY_IMAGE") or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CHAT")
+    api_key = (
+        os.getenv("NVIDIA_API_KEY_IMAGE") or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY_CHAT")
+    )
     endpoint = f"{NVIDIA_GENAI_BASE}/{body.model}"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -68,7 +80,9 @@ async def generate_image(body: ImageRequest, _: str = Depends(get_current_user),
     else:
         artifacts = data.get("artifacts", [])
         if not artifacts:
-            raise HTTPException(status_code=500, detail=f"No image returned. Response keys: {list(data.keys())}")
+            raise HTTPException(
+                status_code=500, detail=f"No image returned. Response keys: {list(data.keys())}"
+            )
         b64 = artifacts[0].get("base64", "")
     msg_id = str(uuid.uuid4())
 
@@ -82,15 +96,12 @@ async def generate_image(body: ImageRequest, _: str = Depends(get_current_user),
     async with get_db() as db:
         await db.execute(
             "INSERT INTO messages (id,conversation_id,role,content,mode,model,created_at) VALUES (?,?,?,?,?,?,?)",
-            (str(uuid.uuid4()), body.conversation_id, "user", body.prompt, "image", body.model, now())
+            (str(uuid.uuid4()), body.conversation_id, "user", body.prompt, "image", body.model, now()),
         )
         await db.execute(
             "INSERT INTO messages (id,conversation_id,role,content,mode,model,image_url,created_at) VALUES (?,?,?,?,?,?,?,?)",
-            (msg_id, body.conversation_id, "assistant", body.prompt, "image", body.model, image_url, now())
+            (msg_id, body.conversation_id, "assistant", body.prompt, "image", body.model, image_url, now()),
         )
-        await db.execute(
-            "UPDATE conversations SET updated_at=? WHERE id=?",
-            (now(), body.conversation_id)
-        )
+        await db.execute("UPDATE conversations SET updated_at=? WHERE id=?", (now(), body.conversation_id))
 
     return {"id": msg_id, "image_url": image_url, "prompt": body.prompt}

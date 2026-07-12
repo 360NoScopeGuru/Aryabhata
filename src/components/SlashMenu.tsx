@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+
 import { type SlashCommand } from '@/lib/slashCommands'
 
 interface Props {
@@ -26,7 +27,10 @@ export default function SlashMenu({ commands, activeIdx, onPick, onSetIdx }: Pro
           data-idx={i}
           className={`slash-row ${i === activeIdx ? 'active' : ''}`}
           onMouseEnter={() => onSetIdx(i)}
-          onMouseDown={e => { e.preventDefault(); onPick(cmd) }}
+          onMouseDown={(e) => {
+            e.preventDefault()
+            onPick(cmd)
+          }}
         >
           <span className="slash-trigger">{cmd.trigger}</span>
           <span className="slash-label">{cmd.label}</span>

@@ -34,20 +34,32 @@ export interface UseVoiceResult {
   onFinal: (handler: (text: string) => void) => void
 }
 
+interface SpeechWindow extends Window {
+  SpeechRecognition?: new () => SpeechRecognitionInstance
+  webkitSpeechRecognition?: new () => SpeechRecognitionInstance
+}
+
 export function useVoice(): UseVoiceResult {
   const [listening, setListening] = useState(false)
   const [interim, setInterim] = useState('')
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
   const finalHandlerRef = useRef<(text: string) => void>(() => {})
 
-  const Ctor = (typeof window !== 'undefined'
-    ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    : null) as (new () => SpeechRecognitionInstance) | null
+  const Ctor =
+    typeof window !== 'undefined'
+      ? ((window as SpeechWindow).SpeechRecognition ??
+        (window as SpeechWindow).webkitSpeechRecognition ??
+        null)
+      : null
   const supported = !!Ctor
 
   useEffect(() => {
     return () => {
-      try { recognitionRef.current?.stop() } catch {}
+      try {
+        recognitionRef.current?.stop()
+      } catch {
+        /* already stopped/uninitialized — safe to ignore */
+      }
     }
   }, [])
 
@@ -87,7 +99,11 @@ export function useVoice(): UseVoiceResult {
   }
 
   const stop = () => {
-    try { recognitionRef.current?.stop() } catch {}
+    try {
+      recognitionRef.current?.stop()
+    } catch {
+      /* already stopped/uninitialized — safe to ignore */
+    }
     setListening(false)
     setInterim('')
   }

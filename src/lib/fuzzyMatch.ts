@@ -39,7 +39,10 @@ export function fuzzyMatch(text: string, query: string): MatchResult | null {
   return { score, positions }
 }
 
-export function highlight(text: string, positions: number[]): Array<{ text: string; matched: boolean }> {
+export function highlight(
+  text: string,
+  positions: number[],
+): Array<{ text: string; matched: boolean }> {
   if (positions.length === 0) return [{ text, matched: false }]
   const out: Array<{ text: string; matched: boolean }> = []
   let cursor = 0

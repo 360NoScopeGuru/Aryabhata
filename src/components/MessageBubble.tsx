@@ -1,12 +1,15 @@
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeHighlight from 'rehype-highlight'
-import { useState, useRef } from 'react'
+import 'highlight.js/styles/github-dark.css'
+
 import * as Tooltip from '@radix-ui/react-tooltip'
+import { type ComponentPropsWithoutRef, isValidElement, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import rehypeHighlight from 'rehype-highlight'
+import remarkGfm from 'remark-gfm'
+
 import type { Message } from '@/store/appStore'
 import { MIXING_MODELS } from '@/store/appStore'
+
 import ContextMenu from './ContextMenu'
-import 'highlight.js/styles/github-dark.css'
 
 interface Props {
   message: Message
@@ -48,11 +51,25 @@ function formatTime(iso: string) {
 }
 
 const toStr = (c: unknown): string =>
-  typeof c === 'string' ? c :
-  Array.isArray(c) ? c.map(toStr).join('') :
-  (c as any)?.props?.children ? toStr((c as any).props.children) : ''
+  typeof c === 'string'
+    ? c
+    : Array.isArray(c)
+      ? c.map(toStr).join('')
+      : isValidElement<{ children?: unknown }>(c)
+        ? toStr(c.props.children)
+        : ''
 
-export default function MessageBubble({ message, isStreaming, isLast, onRegenerate, onEdit, onFork, showVoteButton, votedFor, onVote }: Props) {
+export default function MessageBubble({
+  message,
+  isStreaming,
+  isLast,
+  onRegenerate,
+  onEdit,
+  onFork,
+  showVoteButton,
+  votedFor,
+  onVote,
+}: Props) {
   const isUser = message.role === 'user'
   const [traceOpen, setTraceOpen] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -76,11 +93,17 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
   }
 
   const handleTouchEnd = () => {
-    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null }
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current)
+      pressTimer.current = null
+    }
   }
 
   const handleTouchMove = () => {
-    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null }
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current)
+      pressTimer.current = null
+    }
   }
 
   const ctxItems = [
@@ -88,22 +111,38 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
       label: 'Copy text',
       onSelect: () => navigator.clipboard.writeText(message.content),
     },
-    ...(isUser && onEdit && !isStreaming ? [{
-      label: 'Edit',
-      onSelect: () => { setEditValue(message.content); setEditing(true) },
-    }] : []),
-    ...(isLast && !isUser && onRegenerate && !isStreaming ? [{
-      label: 'Regenerate',
-      onSelect: () => onRegenerate(),
-    }] : []),
-    ...(onFork && !isStreaming ? [{
-      label: 'Fork from here →',
-      onSelect: () => onFork(),
-    }] : []),
+    ...(isUser && onEdit && !isStreaming
+      ? [
+          {
+            label: 'Edit',
+            onSelect: () => {
+              setEditValue(message.content)
+              setEditing(true)
+            },
+          },
+        ]
+      : []),
+    ...(isLast && !isUser && onRegenerate && !isStreaming
+      ? [
+          {
+            label: 'Regenerate',
+            onSelect: () => onRegenerate(),
+          },
+        ]
+      : []),
+    ...(onFork && !isStreaming
+      ? [
+          {
+            label: 'Fork from here →',
+            onSelect: () => onFork(),
+          },
+        ]
+      : []),
   ]
 
-  const modelInfo = message.model ? MIXING_MODELS.find(m => m.id === message.model) : null
-  const hasMetadata = !isUser && !isStreaming && (message.latency || message.ttft || message.outputTokens)
+  const modelInfo = message.model ? MIXING_MODELS.find((m) => m.id === message.model) : null
+  const hasMetadata =
+    !isUser && !isStreaming && (message.latency || message.ttft || message.outputTokens)
 
   const confirmEdit = () => {
     const trimmed = editValue.trim()
@@ -137,13 +176,31 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
         <div className="img-thumb" style={{ maxWidth: '480px' }}>
           <img src={message.image_url} alt={message.content} />
           <div className="img-overlay">
-            <p style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--ink-dim)', letterSpacing: '.08em' }}>
+            <p
+              style={{
+                flex: 1,
+                fontFamily: 'var(--mono)',
+                fontSize: '10px',
+                color: 'var(--ink-dim)',
+                letterSpacing: '.08em',
+              }}
+            >
               {message.content}
             </p>
             <a
               href={message.image_url}
               download={`aryabhata-${message.id}.jpg`}
-              style={{ fontFamily: 'var(--mono)', fontSize: '9.5px', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--accent)', textDecoration: 'none', border: '.5px solid var(--accent)', padding: '4px 10px', borderRadius: 'var(--r)' }}
+              style={{
+                fontFamily: 'var(--mono)',
+                fontSize: '9.5px',
+                letterSpacing: '.14em',
+                textTransform: 'uppercase',
+                color: 'var(--accent)',
+                textDecoration: 'none',
+                border: '.5px solid var(--accent)',
+                padding: '4px 10px',
+                borderRadius: 'var(--r)',
+              }}
             >
               Save
             </a>
@@ -180,7 +237,14 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
         {!isStreaming && (
           <div className="msg-actions">
             {isUser && onEdit && (
-              <button className="msg-action-btn" onClick={() => { setEditValue(message.content); setEditing(true) }} title="Edit">
+              <button
+                className="msg-action-btn"
+                onClick={() => {
+                  setEditValue(message.content)
+                  setEditing(true)
+                }}
+                title="Edit"
+              >
                 ✎
               </button>
             )}
@@ -198,8 +262,8 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
           <div className="attribution-pill" style={{ borderColor: modelInfo.color + '55' }}>
             <span className="attribution-dot" style={{ background: modelInfo.color }} />
             <span>{modelInfo.label}</span>
-            <span style={{ opacity: .4 }}>·</span>
-            <span style={{ opacity: .6 }}>{modelInfo.provider}</span>
+            <span style={{ opacity: 0.4 }}>·</span>
+            <span style={{ opacity: 0.6 }}>{modelInfo.provider}</span>
           </div>
         </div>
       )}
@@ -210,15 +274,23 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
             <textarea
               className="edit-textarea"
               value={editValue}
-              onChange={e => setEditValue(e.target.value)}
+              onChange={(e) => setEditValue(e.target.value)}
               autoFocus
               rows={Math.max(3, editValue.split('\n').length)}
             />
             <div className="edit-actions">
-              <button className="send-btn" style={{ fontSize: '10px', padding: '4px 14px' }} onClick={confirmEdit}>
+              <button
+                className="send-btn"
+                style={{ fontSize: '10px', padding: '4px 14px' }}
+                onClick={confirmEdit}
+              >
                 Resend →
               </button>
-              <button className="stop-btn" style={{ fontSize: '10px', padding: '4px 10px' }} onClick={cancelEdit}>
+              <button
+                className="stop-btn"
+                style={{ fontSize: '10px', padding: '4px 10px' }}
+                onClick={cancelEdit}
+              >
                 Cancel
               </button>
             </div>
@@ -231,16 +303,23 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeHighlight]}
               components={{
-                code({ className, children, ...props }: any) {
+                code({ className, children, ...props }: ComponentPropsWithoutRef<'code'>) {
                   const inline = !className
-                  if (inline) return <code className={className} {...props}>{children}</code>
+                  if (inline)
+                    return (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    )
                   return (
                     <CodeBlock className={className}>
                       {toStr(children).replace(/\n$/, '')}
                     </CodeBlock>
                   )
                 },
-                pre({ children }) { return <>{children}</> },
+                pre({ children }) {
+                  return <>{children}</>
+                },
               }}
             >
               {message.content}
@@ -289,15 +368,21 @@ export default function MessageBubble({ message, isStreaming, isLast, onRegenera
 
       {traceOpen && (
         <div className="trace-panel">
-          <pre>{JSON.stringify({
-            model: message.model,
-            ttft: message.ttft,
-            tpot: message.tpot,
-            latency: message.latency,
-            outputTokens: message.outputTokens,
-            finishReason: message.finishReason,
-            cost: message.cost,
-          }, null, 2)}</pre>
+          <pre>
+            {JSON.stringify(
+              {
+                model: message.model,
+                ttft: message.ttft,
+                tpot: message.tpot,
+                latency: message.latency,
+                outputTokens: message.outputTokens,
+                finishReason: message.finishReason,
+                cost: message.cost,
+              },
+              null,
+              2,
+            )}
+          </pre>
         </div>
       )}
 

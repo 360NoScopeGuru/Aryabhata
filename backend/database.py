@@ -1,7 +1,8 @@
-import asyncpg
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
+import asyncpg
 
 _pool: asyncpg.Pool | None = None
 
@@ -10,12 +11,12 @@ def _pg(query: str) -> str:
     """Convert SQLite-style ? placeholders to Postgres $1, $2, ..."""
     n, out = 0, []
     for ch in query:
-        if ch == '?':
+        if ch == "?":
             n += 1
-            out.append(f'${n}')
+            out.append(f"${n}")
         else:
             out.append(ch)
-    return ''.join(out)
+    return "".join(out)
 
 
 class _DB:
@@ -42,7 +43,7 @@ async def _get_pool() -> asyncpg.Pool:
     if _pool is None:
         url = os.getenv("DATABASE_URL", "")
         # Strip query params asyncpg doesn't understand; pass ssl separately
-        dsn = url.split('?')[0]
+        dsn = url.split("?")[0]
         _pool = await asyncpg.create_pool(
             dsn,
             ssl=os.getenv("DB_SSL_MODE", "require"),  # "disable" for local/CI Postgres containers
@@ -89,9 +90,7 @@ async def init_db():
         await conn.execute(
             "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT ''"
         )
-        await conn.execute(
-            "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS forked_from TEXT DEFAULT NULL"
-        )
+        await conn.execute("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS forked_from TEXT DEFAULT NULL")
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS votes (
                 id          TEXT PRIMARY KEY,
@@ -110,12 +109,8 @@ async def init_db():
         await conn.execute(
             "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT FALSE"
         )
-        await conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_messages_conv_id ON messages(conversation_id)"
-        )
-        await conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id)"
-        )
+        await conn.execute("CREATE INDEX IF NOT EXISTS idx_messages_conv_id ON messages(conversation_id)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id)")
         await conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC)"
         )
@@ -130,12 +125,10 @@ async def init_db():
         await conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_shared_links_conv_id ON shared_links(conversation_id)"
         )
-        await conn.execute(
-            "ALTER TABLE shared_links ADD COLUMN IF NOT EXISTS expires_at TEXT"
-        )
+        await conn.execute("ALTER TABLE shared_links ADD COLUMN IF NOT EXISTS expires_at TEXT")
         # Links created before the expiry policy existed have no expires_at yet.
         # Retroactively expire them now rather than grandfathering (owner decision).
         await conn.execute(
             "UPDATE shared_links SET expires_at = $1 WHERE expires_at IS NULL",
-            datetime.now(timezone.utc).isoformat(),
+            datetime.now(UTC).isoformat(),
         )

@@ -75,7 +75,9 @@ export function generateDNA(seed: string, opts: DNAOptions = {}): string {
     const px = cx + Math.cos(a) * (r + 1.2)
     const py = cy + Math.sin(a) * (r + 1.2)
     const radius = 0.5 + rng() * 0.6
-    out.push(`<circle cx="${px.toFixed(2)}" cy="${py.toFixed(2)}" r="${radius.toFixed(2)}" fill="currentColor"/>`)
+    out.push(
+      `<circle cx="${px.toFixed(2)}" cy="${py.toFixed(2)}" r="${radius.toFixed(2)}" fill="currentColor"/>`,
+    )
   }
 
   // Inner core: ring + dot

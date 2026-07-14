@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  frontend:
+    name: Frontend (lint, typecheck, test, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test:coverage
+
+      - name: Build
+        env:
+          VITE_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
+        run: npm run build
+
+  backend:
+    name: Backend (ruff, pytest)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: aryabhata
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql://postgres:testpass@localhost:55432/aryabhata
+      DB_SSL_MODE: disable
+      CLERK_JWKS_URL: https://example.clerk.accounts.dev/.well-known/jwks.json
+      CLERK_SECRET_KEY: sk_test_ci_placeholder
+      CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
+      ALLOWED_ORIGINS: http://localhost:5173
+      NVIDIA_API_KEY: ci-placeholder
+      CLOUDINARY_CLOUD_NAME: ci-placeholder
+      CLOUDINARY_API_KEY: ci-placeholder
+      CLOUDINARY_API_SECRET: ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Format check
+        run: ruff format --check .
+
+      - name: Test
+        run: pytest --cov=. --cov-report=term-missing
+
+  docker-build:
+    name: Docker build (deploy sanity check)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_test_ci_placeholder -t aryabhata-ci-check .

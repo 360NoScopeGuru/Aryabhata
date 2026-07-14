@@ -13,8 +13,11 @@ COPY backend/requirements.txt backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
 # Node dependencies
+# --legacy-peer-deps: eslint-plugin-jsx-a11y's peer range (^3..^9) hasn't
+# caught up to eslint 10 yet; this is a devDependency-only conflict that
+# doesn't affect the production bundle.
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy source and build frontend
 COPY . .

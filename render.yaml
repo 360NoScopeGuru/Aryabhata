@@ -31,3 +31,7 @@ services:
         sync: false
       - key: VITE_CLERK_PUBLISHABLE_KEY
         sync: false
+      - key: NVIDIA_API_KEY_DEMO
+        sync: false
+      - key: DEMO_DAILY_SPEND_CAP_USD
+        sync: false

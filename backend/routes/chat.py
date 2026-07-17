@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import uuid
 from datetime import UTC, datetime
 
@@ -10,6 +11,7 @@ from pydantic import BaseModel
 
 from auth import get_current_user
 from database import get_db
+from model_pricing import estimate_cost_usd
 from models import ChatRequest, RouteRequest
 from rate_limit import RateLimit
 
@@ -98,6 +100,8 @@ async def chat_stream(body: ChatRequest, _: str = Depends(get_current_user), __:
 
     async def generate():
         char_count = 0
+        start = time.monotonic()
+        ttft_ms: int | None = None
         try:
             stream = await client.chat.completions.create(**create_kwargs)
             async for chunk in stream:
@@ -105,6 +109,8 @@ async def chat_stream(body: ChatRequest, _: str = Depends(get_current_user), __:
                     continue
                 delta = chunk.choices[0].delta.content or ""
                 if delta:
+                    if ttft_ms is None:
+                        ttft_ms = int((time.monotonic() - start) * 1000)
                     full_response.append(delta)
                     char_count += len(delta)
                     yield f"data: {json.dumps({'delta': delta})}\n\n"
@@ -117,6 +123,8 @@ async def chat_stream(body: ChatRequest, _: str = Depends(get_current_user), __:
 
         full_text = "".join(full_response)
         output_tokens = max(1, char_count // 4)
+        latency_ms = int((time.monotonic() - start) * 1000)
+        cost_usd = estimate_cost_usd(model, output_tokens)
         try:
             async with get_db() as db:
                 user_msg = body.messages[-1]
@@ -133,8 +141,20 @@ async def chat_stream(body: ChatRequest, _: str = Depends(get_current_user), __:
                     ),
                 )
                 await db.execute(
-                    "INSERT INTO messages (id,conversation_id,role,content,mode,model,created_at) VALUES (?,?,?,?,?,?,?)",
-                    (msg_id, body.conversation_id, "assistant", full_text, "chat", model, now()),
+                    "INSERT INTO messages (id,conversation_id,role,content,mode,model,created_at,ttft_ms,latency_ms,output_tokens,cost_usd) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                    (
+                        msg_id,
+                        body.conversation_id,
+                        "assistant",
+                        full_text,
+                        "chat",
+                        model,
+                        now(),
+                        ttft_ms,
+                        latency_ms,
+                        output_tokens,
+                        cost_usd,
+                    ),
                 )
                 await db.execute(
                     "UPDATE conversations SET updated_at=?, model=? WHERE id=?",

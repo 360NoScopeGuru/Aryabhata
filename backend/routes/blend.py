@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import traceback
 import uuid
 from datetime import UTC, datetime
@@ -10,6 +11,7 @@ from openai import AsyncOpenAI
 
 from auth import get_current_user
 from database import get_db
+from model_pricing import estimate_cost_usd
 from models import BlendRequest
 from rate_limit import RateLimit
 
@@ -127,6 +129,7 @@ async def blend_stream(
 
     async def generate():
         previous_responses: dict[str, str] = {}
+        telemetry: dict[str, dict] = {}
         user_query = body.messages[-1].content if body.messages else ""
 
         for model_id in models:
@@ -143,6 +146,9 @@ async def blend_stream(
             yield f"data: {json.dumps({'model_start': model_id})}\n\n"
 
             full_text: list[str] = []
+            char_count = 0
+            start = time.monotonic()
+            ttft_ms: int | None = None
             try:
                 create_kwargs = dict(
                     model=model_id,
@@ -161,7 +167,10 @@ async def blend_stream(
                         continue
                     delta = chunk.choices[0].delta.content or ""
                     if delta:
+                        if ttft_ms is None:
+                            ttft_ms = int((time.monotonic() - start) * 1000)
                         full_text.append(delta)
+                        char_count += len(delta)
                         yield f"data: {json.dumps({'model': model_id, 'delta': delta})}\n\n"
             except Exception as e:
                 err = f"[{MODEL_LABELS.get(model_id, model_id)} error: {type(e).__name__}]"
@@ -170,6 +179,13 @@ async def blend_stream(
 
             response_text = "".join(full_text)
             previous_responses[model_id] = response_text
+            output_tokens = max(1, char_count // 4) if full_text else 0
+            telemetry[model_id] = {
+                "ttft_ms": ttft_ms,
+                "latency_ms": int((time.monotonic() - start) * 1000),
+                "output_tokens": output_tokens,
+                "cost_usd": estimate_cost_usd(model_id, output_tokens),
+            }
             yield f"data: {json.dumps({'model_done': model_id, 'text': response_text})}\n\n"
 
         # Persist all messages to DB
@@ -189,9 +205,22 @@ async def blend_stream(
                     ),
                 )
                 for model_id, text in previous_responses.items():
+                    t = telemetry.get(model_id, {})
                     await db.execute(
-                        "INSERT INTO messages (id,conversation_id,role,content,mode,model,created_at) VALUES (?,?,?,?,?,?,?)",
-                        (str(uuid.uuid4()), body.conversation_id, "assistant", text, "chat", model_id, now()),
+                        "INSERT INTO messages (id,conversation_id,role,content,mode,model,created_at,ttft_ms,latency_ms,output_tokens,cost_usd) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                        (
+                            str(uuid.uuid4()),
+                            body.conversation_id,
+                            "assistant",
+                            text,
+                            "chat",
+                            model_id,
+                            now(),
+                            t.get("ttft_ms"),
+                            t.get("latency_ms"),
+                            t.get("output_tokens"),
+                            t.get("cost_usd"),
+                        ),
                     )
                 await db.execute(
                     "UPDATE conversations SET updated_at=?, model=? WHERE id=?",

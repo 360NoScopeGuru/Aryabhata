@@ -4023,6 +4023,136 @@ pre.code-block {
   text-align: right;
 }
 
+.ins-bench-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ins-bench-row {
+  display: grid;
+  grid-template-columns: 1fr 48px 64px 56px 84px 72px;
+  gap: 10px;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-dim);
+}
+.ins-bench-row > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ins-bench-head {
+  color: var(--ink-faint);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding-bottom: 4px;
+  border-bottom: var(--border-w) solid var(--line-soft);
+}
+.ins-bench-row .ins-bar-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Unauthenticated demo modal (AuthLayout entry point) ──────────── */
+.auth-demo-link {
+  margin-top: 14px;
+  width: 100%;
+  background: none;
+  border: 0.5px solid var(--line-soft);
+  color: var(--ink-dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 8px 12px;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: var(--trans);
+}
+.auth-demo-link:hover {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line-soft));
+}
+
+.demo-scrim {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, #000 70%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vh;
+}
+.demo-modal {
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg);
+  border: 0.5px solid color-mix(in srgb, var(--accent) 30%, var(--line-soft));
+  border-radius: calc(var(--r) * 1.5);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6);
+  padding: 18px 20px;
+}
+.demo-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.demo-title {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+.demo-sub {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--ink-faint);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.demo-textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 0.5px solid var(--line-soft);
+  border-radius: var(--r);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 10px;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+.demo-error {
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--warn);
+}
+.demo-result {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 0.5px solid var(--line-soft);
+}
+.demo-reply {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.demo-meta {
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink-faint);
+  letter-spacing: 0.05em;
+}
+
 /* ── Live Streaming Theatre (right rail telemetry) ──────────────── */
 .streaming-theatre {
   position: relative;

@@ -1,11 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+import { useAuthFetch } from '@/hooks/useAuthFetch'
 import { MIXING_MODELS, useAppStore } from '@/store/appStore'
 
 interface Props {
   open: boolean
   onClose: () => void
+}
+
+interface ModelBenchmark {
+  model_id: string
+  message_count: number
+  avg_ttft_ms: number | null
+  avg_latency_ms: number | null
+  tokens_per_sec: number
+  total_cost_usd: number
+  wins: number
+  total_rounds: number
+  win_rate: number | null
+  last_used_at: string
 }
 
 const DAY_MS = 86_400_000
@@ -19,6 +33,9 @@ function startOfDay(t: number): number {
 
 export default function Insights({ open, onClose }: Props) {
   const { conversations, messages, sessionTokens, threadCount } = useAppStore()
+  const authFetch = useAuthFetch()
+  const [benchmarks, setBenchmarks] = useState<ModelBenchmark[]>([])
+  const [benchmarksLoading, setBenchmarksLoading] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -28,6 +45,17 @@ export default function Insights({ open, onClose }: Props) {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [open, onClose])
+
+  useEffect(() => {
+    if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- this is a data-fetching effect (React's own documented use case for effects), not the derived-state anti-pattern the rule targets
+    setBenchmarksLoading(true)
+    authFetch('/api/eval/models')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setBenchmarks(Array.isArray(data) ? data : []))
+      .catch(() => setBenchmarks([]))
+      .finally(() => setBenchmarksLoading(false))
+  }, [open, authFetch])
 
   const stats = useMemo(() => {
     let totalMessages = 0
@@ -263,6 +291,50 @@ export default function Insights({ open, onClose }: Props) {
                     <span className="ins-bar-val">{m.count}</span>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* Model eval / benchmarks — server-measured, not synthetic */}
+          <div className="ins-card ins-wide">
+            <div className="ins-card-title">
+              Model Benchmarks · latency, cost &amp; win rate from real usage
+            </div>
+            {benchmarksLoading ? (
+              <div className="ins-empty">Loading…</div>
+            ) : benchmarks.length === 0 ? (
+              <div className="ins-empty">
+                No completed generations yet — send a message to start building benchmarks
+              </div>
+            ) : (
+              <div className="ins-bench-table">
+                <div className="ins-bench-row ins-bench-head">
+                  <span>Model</span>
+                  <span>Msgs</span>
+                  <span>TTFT</span>
+                  <span>Tok/s</span>
+                  <span>Cost (est.)</span>
+                  <span>Win rate</span>
+                </div>
+                {benchmarks.map((b) => {
+                  const info = MIXING_MODELS.find((m) => m.id === b.model_id)
+                  return (
+                    <div key={b.model_id} className="ins-bench-row">
+                      <span className="ins-bar-label">
+                        <span
+                          className="ins-bar-dot"
+                          style={{ background: info?.color ?? 'var(--accent)' }}
+                        />
+                        {info?.label ?? b.model_id.split('/').pop()}
+                      </span>
+                      <span>{b.message_count}</span>
+                      <span>{b.avg_ttft_ms != null ? `${b.avg_ttft_ms}ms` : '—'}</span>
+                      <span>{b.tokens_per_sec.toFixed(1)}</span>
+                      <span>${b.total_cost_usd.toFixed(4)}</span>
+                      <span>{b.win_rate != null ? `${Math.round(b.win_rate * 100)}%` : '—'}</span>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

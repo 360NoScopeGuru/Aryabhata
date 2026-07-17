@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { generateDNA } from '@/lib/dnaGenerator'
 import { useAppStore } from '@/store/appStore'
 
+import DemoModal from './DemoModal'
+
 interface Props {
   mode: 'signin' | 'signup'
   children: ReactNode
@@ -79,6 +81,8 @@ export default function AuthLayout({ mode, children }: Props) {
 
   // Drifting DNA particles — generated once per mount
   const particles = useMemo(() => buildParticles(7), [])
+
+  const [demoOpen, setDemoOpen] = useState(false)
 
   // Live UTC clock for the readout
   const [utc, setUtc] = useState(() => new Date().toISOString().slice(11, 19))
@@ -399,9 +403,15 @@ export default function AuthLayout({ mode, children }: Props) {
                 <i /> NVIDIA NIM
               </span>
             </div>
+
+            <button className="auth-demo-link" onClick={() => setDemoOpen(true)}>
+              Try it without signing in →
+            </button>
           </div>
         </section>
       </div>
+
+      {demoOpen && <DemoModal onClose={() => setDemoOpen(false)} />}
     </div>
   )
 }

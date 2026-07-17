@@ -49,7 +49,7 @@ async def _clean_db():
     await init_db()
     pool = await _get_pool()
     async with pool.acquire() as conn:
-        await conn.execute("TRUNCATE conversations, messages, votes, shared_links CASCADE")
+        await conn.execute("TRUNCATE conversations, messages, votes, shared_links, demo_usage CASCADE")
     main_module.app.dependency_overrides[get_current_user] = _header_based_user
     yield
     main_module.app.dependency_overrides.clear()
@@ -123,7 +123,7 @@ def fake_nim(monkeypatch):
     FakeNIMClient instance regardless of how many times it's constructed
     (blend.py builds a fresh client per model in its loop) — returns that
     shared instance so tests can inspect `.calls`."""
-    from routes import blend, chat
+    from routes import blend, chat, demo
 
     fake = FakeNIMClient()
 
@@ -133,4 +133,5 @@ def fake_nim(monkeypatch):
 
     monkeypatch.setattr(chat, "AsyncOpenAI", _factory)
     monkeypatch.setattr(blend, "AsyncOpenAI", _factory)
+    monkeypatch.setattr(demo, "AsyncOpenAI", _factory)
     return fake

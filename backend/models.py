@@ -81,3 +81,15 @@ class VoteRequest(BaseModel):
     msg_id: str
     model_id: str
     prompt_hash: str
+
+
+DEMO_MODELS = (
+    "meta/llama-3.2-3b-instruct",
+    "google/gemma-2-9b-it",
+    "microsoft/phi-3-mini-128k-instruct",
+)
+
+
+class DemoChatRequest(BaseModel):
+    prompt: str = Field(min_length=1, max_length=2000)
+    model: str = DEMO_MODELS[0]

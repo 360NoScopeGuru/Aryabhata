@@ -11,7 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from database import init_db
-from routes import arena, blend, chat, code, conversations, image, prompt, sharing
+from routes import arena, blend, chat, code, conversations, demo, image, prompt, sharing
+from routes import eval as eval_routes
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -40,6 +41,8 @@ app.include_router(blend.router, prefix="/api")
 app.include_router(prompt.router, prefix="/api")
 app.include_router(arena.router, prefix="/api")
 app.include_router(sharing.router, prefix="/api")
+app.include_router(eval_routes.router, prefix="/api")
+app.include_router(demo.router, prefix="/api")
 
 
 @app.on_event("startup")

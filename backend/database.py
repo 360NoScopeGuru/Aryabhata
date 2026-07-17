@@ -132,3 +132,25 @@ async def init_db():
             "UPDATE shared_links SET expires_at = $1 WHERE expires_at IS NULL",
             datetime.now(UTC).isoformat(),
         )
+
+        # Server-measured generation telemetry, for the model eval dashboard.
+        # Measured in the streaming generator itself (routes/chat.py,
+        # routes/blend.py) rather than trusting client-reported numbers.
+        await conn.execute("ALTER TABLE messages ADD COLUMN IF NOT EXISTS ttft_ms INTEGER")
+        await conn.execute("ALTER TABLE messages ADD COLUMN IF NOT EXISTS latency_ms INTEGER")
+        await conn.execute("ALTER TABLE messages ADD COLUMN IF NOT EXISTS output_tokens INTEGER")
+        await conn.execute("ALTER TABLE messages ADD COLUMN IF NOT EXISTS cost_usd REAL")
+        await conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_messages_model ON messages(model) WHERE role='assistant'"
+        )
+
+        # Global (not per-user) running spend total for the unauthenticated
+        # demo endpoint, keyed by UTC day — enforces a hard daily cost cap
+        # since demo traffic shares the same server-side NVIDIA API keys as
+        # authenticated users.
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS demo_usage (
+                day      TEXT PRIMARY KEY,
+                cost_usd REAL NOT NULL DEFAULT 0
+            )
+        """)

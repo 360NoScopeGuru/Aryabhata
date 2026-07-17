@@ -48,7 +48,9 @@ Every conversation is persisted to a cloud Postgres database, scoped to the auth
 | **Slash Commands** | Type `/` in the composer for `/eli5`, `/critique`, `/summarize`, `/translate`, `/code`, `/refactor`, `/whatif`, plus action commands |
 | **Conversation DNA** | Every session gets a deterministic generative SVG fingerprint — a unique visual identity in the breadcrumb and sidebar |
 | **Multiverse** | Visualize all conversations and their fork lineage as an interactive SVG tree (Ctrl+M) |
-| **Insights** | Personal analytics: 26-week activity heatmap, top-models bar chart, 24-hour active-time radial (Ctrl+I) |
+| **Insights** | Personal analytics: 26-week activity heatmap, top-models bar chart, 24-hour active-time radial, and a model eval/benchmarking table (Ctrl+I) |
+| **Model Eval Dashboard** | Server-measured TTFT, latency, tokens/sec, estimated cost, and Arena win rate per model — built on real usage telemetry, not synthetic benchmarks |
+| **Demo Mode** | Try one message with no sign-up — heavily rate-limited, fixed cheap/fast model, hard daily spend cap |
 | **Voice Input** | Web Speech API mic in the composer — live interim transcript appended to the textarea while you speak |
 | **Streaming Theatre** | The right-rail telemetry block transforms during active streams — pulsing sweep, blinking LIVE indicator, real-time token counter |
 | **Instrument UI** | 5 design themes (with matching favicons), live sparkline telemetry, UTC + local clock, and a status bar modeled after an engineering HUD |
@@ -194,7 +196,25 @@ A **personal analytics dashboard** computed entirely client-side from your messa
 - **8 stat cards** — total sessions, messages, output tokens, CO₂ estimate, average TTFT, threads, forks, current session tokens
 - **26-week activity heatmap** — GitHub-style contribution grid. Each cell is a day; opacity scales with that day's token volume; hover for exact totals
 - **Top Models bar chart** — your 8 most-used models by message count, ordered with provider-color win-rate bars
+- **Model Benchmarks table** — server-measured TTFT, tokens/sec, estimated cost, and Arena win rate per model (see [Model Eval Dashboard](#model-eval-dashboard) below)
 - **24-hour active-time radial** — when you actually use the app, broken down by local hour. Spokes radiate from a center hub; longer spokes = more activity at that hour
+
+### 📈 Model Eval Dashboard
+
+Every chat/blend generation is timed **server-side** — `time.monotonic()` at first token and at stream end, inside the actual FastAPI streaming generator, not trusted from the client. Each assistant message persists `ttft_ms`, `latency_ms`, `output_tokens`, and an estimated `cost_usd`.
+
+`GET /api/eval/models` aggregates your own message history into a per-model table: message count, average TTFT, tokens/sec, total estimated cost, and — joined from the existing Arena votes table — win rate. Rendered as the "Model Benchmarks" section inside Insights.
+
+Cost figures are labelled **estimates**: NVIDIA NIM doesn't expose live per-token pricing via API, so `backend/model_pricing.py` uses representative $/1M-token figures for comparably-sized hosted models (same "est." framing as the existing CO₂ footprint metric) — not a billing statement.
+
+### 🔓 Try It — Demo Mode
+
+A **"Try it without signing in"** link on the sign-in screen opens a single-message demo — no account needed.
+
+- Restricted to **3 fixed cheap/fast models** (Llama 3.2 3B, Gemma 2 9B, Phi-3 Mini) — not the full 40-model catalog
+- `max_tokens` is fixed server-side (300) and isn't a request field at all — cost per call can't be inflated by the caller
+- A **hard daily USD spend cap** (`DEMO_DAILY_SPEND_CAP_USD`, default $1.00) is checked before every model call and tracked in a dedicated `demo_usage` table; once exceeded, the endpoint returns 429 with a "sign up for unlimited access" message instead of ever calling the model
+- Strict per-IP rate limiting (5 requests/60s) — this is the one endpoint in the app with zero authentication
 
 ### 🎬 Live Streaming Theatre
 
@@ -434,43 +454,38 @@ The sign-in and sign-up pages are a full immersive experience, not a bare Clerk 
 
 ## Architecture
 
+```mermaid
+flowchart TB
+    subgraph browser["Browser — React 19 + Vite + TypeScript"]
+        modes["ChatMode · CodeMode (Monaco) · ImageMode · Blend Mode"]
+        store["Zustand store (conversations · messages · telemetry · arena)"]
+        hooks["useStream (SSE) · useAuthFetch (JWT injection)"]
+        clerkReact["Clerk React (auth guard, token retrieval)"]
+    end
+
+    subgraph api["FastAPI — Python 3.12, uvicorn"]
+        authcheck["PyJWT + Clerk JWKS → RS256 verification per request"]
+        chatRoutes["/api/chat/*, /api/code/*, /api/blend/*, /api/image/*"]
+        metaRoutes["/api/route, /api/prompt/enhance, /api/arena/*"]
+        convRoutes["/api/conversations/*, /api/share/*"]
+        evalRoute["/api/eval/models — benchmarks from real telemetry"]
+        demoRoute["/api/demo/* — unauthenticated, rate-limited, spend-capped"]
+    end
+
+    neon[("Neon Postgres — asyncpg / PgBouncer<br/>conversations · messages · votes<br/>shared_links · demo_usage")]
+    nim["NVIDIA NIM<br/>integrate.api.nvidia.com/v1<br/>40+ LLMs · 2 image models"]
+    cloudinary["Cloudinary — image CDN"]
+    clerkSvc["Clerk — JWKS + user management"]
+
+    browser -- "HTTPS / SSE&#10;Authorization: Bearer JWT" --> api
+    api --> neon
+    api --> nim
+    api --> cloudinary
+    authcheck -.-> clerkSvc
+    demoRoute -.->|"no auth"| nim
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Browser  (React 19 + Vite + TypeScript)                        │
-│                                                                 │
-│  ChatMode · CodeMode (Monaco) · ImageMode · Blend Mode          │
-│  Zustand store (conversations · messages · telemetry · arena)   │
-│  useStream hook (SSE) · useAuthFetch (JWT injection)            │
-│  Clerk React (auth guard, token retrieval)                      │
-└───────────────────────────────┬─────────────────────────────────┘
-                                │ HTTPS / SSE
-                                │ Authorization: Bearer <Clerk JWT>
-┌───────────────────────────────▼─────────────────────────────────┐
-│  FastAPI  (Python 3.12, uvicorn)                                 │
-│                                                                 │
-│  /api/chat/stream          SSE chat completion                  │
-│  /api/code/stream          SSE code completion                  │
-│  /api/blend/stream         Parallel SSE across N models         │
-│  /api/image/generate       Synchronous image generation         │
-│  /api/route                Prompt classifier (chat/code/image)  │
-│  /api/chat/name            Auto-title generator                 │
-│  /api/prompt/enhance       One-shot prompt rewrite              │
-│  /api/arena/vote           Cast a Blend round vote              │
-│  /api/arena/leaderboard    Personal model win-rate rankings      │
-│  /api/conversations/*      CRUD, pin, fork, duplicate, clear    │
-│                                                                 │
-│  PyJWT + Clerk JWKS  →  RS256 token verification per request    │
-└─────────────────┬───────────────────────┬────────────────────────┘
-                  │                       │
-   ┌──────────────▼──────────┐  ┌─────────▼───────────────────────┐
-   │  Neon Postgres           │  │  NVIDIA NIM                      │
-   │  asyncpg · PgBouncer     │  │  integrate.api.nvidia.com/v1     │
-   │                          │  │  OpenAI-compatible REST API      │
-   │  conversations           │  │  40+ LLMs · 2 image models       │
-   │  messages                │  └──────────────────────────────────┘
-   │  votes (Arena)           │
-   └──────────────────────────┘
-```
+
+For the Clerk JWT verification flow and the `_pg()` parameterized-query translator in detail, see **[ARCHITECTURE.md](./ARCHITECTURE.md)**.
 
 ---
 
@@ -507,6 +522,17 @@ The sign-in and sign-up pages are a full immersive experience, not a bare Clerk 
 | PyJWT + cryptography | Clerk JWT verification (RS256) |
 | python-dotenv | Environment variable loading |
 
+### Testing & CI
+
+| Tool | Role |
+|------|------|
+| pytest + pytest-asyncio + httpx `ASGITransport` | Backend tests (74 passing) against a real Postgres 16 container — not mocks |
+| pytest-cov | Backend coverage reporting |
+| Vitest + React Testing Library + jsdom | Frontend tests (102 passing) |
+| ruff | Backend lint + format |
+| Prettier + ESLint (`eslint-plugin-jsx-a11y`, `simple-import-sort`) | Frontend lint + format |
+| GitHub Actions | CI on every PR/push — lint, typecheck, test, build (frontend + backend), plus a Docker build sanity check on `main` |
+
 ### Infrastructure
 
 | Service | Role |
@@ -542,7 +568,11 @@ CREATE TABLE messages (
     mode                TEXT NOT NULL DEFAULT 'chat',
     model               TEXT,
     image_url           TEXT,                     -- populated for image generation responses
-    created_at          TEXT NOT NULL
+    created_at          TEXT NOT NULL,
+    ttft_ms             INTEGER,                  -- server-measured time-to-first-token
+    latency_ms          INTEGER,                  -- server-measured total generation time
+    output_tokens       INTEGER,
+    cost_usd            REAL                      -- estimated, see backend/model_pricing.py
 );
 
 -- Arena: one vote per user per prompt round (deduped by SHA-256 of prompt text)
@@ -557,10 +587,27 @@ CREATE TABLE votes (
 );
 CREATE UNIQUE INDEX votes_user_prompt ON votes(user_id, conv_id, prompt_hash);
 
+-- Public share links — expire 30 days after creation
+CREATE TABLE shared_links (
+    token            TEXT PRIMARY KEY,
+    conversation_id  TEXT NOT NULL,
+    user_id          TEXT NOT NULL,
+    created_at       TEXT NOT NULL,
+    expires_at       TEXT
+);
+
+-- Global (not per-user) running spend for the unauthenticated demo endpoint,
+-- keyed by UTC day — enforces DEMO_DAILY_SPEND_CAP_USD
+CREATE TABLE demo_usage (
+    day       TEXT PRIMARY KEY,
+    cost_usd  REAL NOT NULL DEFAULT 0
+);
+
 -- Performance indexes
 CREATE INDEX idx_messages_conv_id          ON messages(conversation_id);
 CREATE INDEX idx_conversations_user_id     ON conversations(user_id);
 CREATE INDEX idx_conversations_updated_at  ON conversations(updated_at DESC);
+CREATE INDEX idx_messages_model            ON messages(model) WHERE role='assistant';
 ```
 
 ---
@@ -571,7 +618,9 @@ CREATE INDEX idx_conversations_updated_at  ON conversations(updated_at DESC);
 
 - Node.js 20+
 - Python 3.12+
-- A [Neon](https://neon.tech) Postgres database (free tier works)
+- Git
+- [Docker](https://www.docker.com/products/docker-desktop/) — for a local Postgres 16 container (backend tests and local dev both use this rather than hitting Neon directly)
+- A [Neon](https://neon.tech) Postgres database (free tier works, production only)
 - A [Clerk](https://clerk.com) application (free tier works)
 - An [NVIDIA NIM](https://build.nvidia.com) API key
 - A [Cloudinary](https://cloudinary.com) account (free tier works, for image storage)
@@ -608,21 +657,29 @@ cp .env.example .env
 # NVIDIA NIM — get keys at build.nvidia.com
 NVIDIA_API_KEY=nvapi-...
 NVIDIA_API_KEY_IMAGE=nvapi-...          # optional; falls back to NVIDIA_API_KEY
+NVIDIA_API_KEY_DEMO=nvapi-...           # optional; falls back to NVIDIA_API_KEY — used by /api/demo
 
-# Neon Postgres — from your Neon project dashboard
+# Neon Postgres — from your Neon project dashboard. For local dev, point this
+# at a local Docker Postgres instead (see "Run a local Postgres" below) and
+# set DB_SSL_MODE=disable, since a plain Docker container has no SSL configured.
 DATABASE_URL=postgresql://user:pass@host/dbname?sslmode=require
+# DB_SSL_MODE=disable
 
 # Clerk — from your Clerk dashboard → API Keys
 CLERK_SECRET_KEY=sk_live_...
 CLERK_PUBLISHABLE_KEY=pk_live_...
+CLERK_JWKS_URL=https://your-instance.clerk.accounts.dev/.well-known/jwks.json
 
 # Cloudinary — from your Cloudinary dashboard
 CLOUDINARY_CLOUD_NAME=your-cloud-name
 CLOUDINARY_API_KEY=your-api-key
 CLOUDINARY_API_SECRET=your-api-secret
 
-# CORS — comma-separated allowed origins (defaults to * if unset)
+# CORS — comma-separated allowed origins. Required: requests are rejected if unset (fail-closed, not *).
 ALLOWED_ORIGINS=http://localhost:5173
+
+# Hard daily USD cap on unauthenticated demo-mode spend
+DEMO_DAILY_SPEND_CAP_USD=1.00
 ```
 
 **`.env`** (project root, for Vite)
@@ -631,7 +688,15 @@ ALLOWED_ORIGINS=http://localhost:5173
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
 ```
 
-### 4. Run
+### 4. Run a local Postgres
+
+```bash
+docker run -d --name aryabhata-pg -e POSTGRES_PASSWORD=devpass -e POSTGRES_DB=aryabhata -p 5432:5432 postgres:16
+```
+
+Point `DATABASE_URL` at `postgresql://postgres:devpass@localhost:5432/aryabhata` with `DB_SSL_MODE=disable`. The backend's `init_db()` creates all tables/indexes on startup — no manual migration step.
+
+### 5. Run
 
 ```bash
 # Terminal 1 — backend
@@ -642,6 +707,26 @@ npm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173). The Vite dev server proxies `/api/*` to port 8000 automatically.
+
+---
+
+## Testing
+
+```bash
+# Backend — needs the local Postgres container from step 4 above
+cd backend
+pip install -r requirements-dev.txt
+pytest                          # 74 tests
+pytest --cov=. --cov-report=term-missing   # with coverage
+
+# Frontend
+npm run test                    # 102 tests, Vitest
+npm run test:coverage           # with coverage
+npm run typecheck               # tsc -b --noEmit
+npm run lint
+```
+
+Backend tests run against the real Postgres container (not mocks or SQLite) and mock only the NVIDIA NIM client, so the actual SQL, auth, rate-limiting, and ownership-scoping logic is genuinely exercised. Coverage: ~76% on backend routes/auth/rate-limit; ~61% on frontend components/store/lib (weighted toward `src/lib` and `src/store`, which sit at 94%+ and 74% respectively — component coverage is intentionally lighter, per the plan's priority order).
 
 ---
 
@@ -667,20 +752,23 @@ cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
 |----------|-------|
 | `NVIDIA_API_KEY` | Primary NIM key (chat, code, routing, naming) |
 | `NVIDIA_API_KEY_IMAGE` | Optional separate key for image generation; falls back to `NVIDIA_API_KEY` |
+| `NVIDIA_API_KEY_DEMO` | Optional separate key for the unauthenticated demo endpoint; falls back to `NVIDIA_API_KEY` |
 | `DATABASE_URL` | Neon connection string |
 | `CLERK_SECRET_KEY` | Clerk secret key |
 | `CLERK_PUBLISHABLE_KEY` | Clerk publishable key (also used by the frontend build) |
+| `CLERK_JWKS_URL` | Clerk JWKS endpoint — required; the app throws on first auth request if unset |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
-| `ALLOWED_ORIGINS` | Comma-separated CORS origins, e.g. `https://aryabhata-rkfm.onrender.com` (defaults to `*`) |
-| `VITE_CLERK_PUBLISHABLE_KEY` | **Must be a Build Arg** — Vite bakes it into the bundle at build time |
+| `ALLOWED_ORIGINS` | Comma-separated CORS origins, e.g. `https://aryabhata-rkfm.onrender.com`. **Required** — fails closed (rejects all cross-origin requests) if unset, not `*` |
+| `DEMO_DAILY_SPEND_CAP_USD` | Hard daily USD cap on unauthenticated demo-mode spend (default `1.00`) |
+| `VITE_CLERK_PUBLISHABLE_KEY` | **Must be a Build Arg** — Vite bakes it into the bundle at build time. Without a real value here, Rollup's dead-code elimination can strip the entire render path (see `main.tsx`'s throw-on-missing-key) and silently ship a broken bundle — always verify this is set before deploying |
 
 ---
 
 ## API Reference
 
-All routes require `Authorization: Bearer <Clerk JWT>`.
+All routes require `Authorization: Bearer <Clerk JWT>` **except** the public share-read (`GET /api/share/{token}`) and demo endpoints, which are explicitly unauthenticated and rate-limited by IP instead.
 
 ### Chat
 
@@ -736,6 +824,27 @@ All routes require `Authorization: Bearer <Clerk JWT>`.
 | `DELETE` | `/api/conversations/{id}/messages` | Clear all messages (keep conversation) |
 | `DELETE` | `/api/conversations/{id}/messages/{msg_id}/onwards` | Delete a message and all following messages |
 
+### Sharing
+
+| Method | Route | Body | Description |
+|--------|-------|------|-------------|
+| `POST` | `/api/conversations/{id}/share` | — | Create (or return the existing, still-valid) share link; expires 30 days after creation |
+| `DELETE` | `/api/conversations/{id}/share` | — | Revoke a share link |
+| `GET` | `/api/share/{token}` | — | **Public, unauthenticated.** Rate-limited per IP. Returns 404 for an unknown token, 410 for an expired one |
+
+### Eval
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/eval/models` | Per-model benchmarks from your own message history: message count, avg TTFT/latency, tokens/sec, total estimated cost, Arena win rate |
+
+### Demo
+
+| Method | Route | Body | Description |
+|--------|-------|------|-------------|
+| `GET` | `/api/demo/status` | — | **Public, unauthenticated.** Available demo models, daily cap, and today's spend |
+| `POST` | `/api/demo/chat` | `{ prompt, model? }` | **Public, unauthenticated.** Rate-limited 5 req/60s per IP; 429 once the daily spend cap is reached; `model` must be one of the 3 fixed demo models |
+
 ### SSE Stream Format
 
 ```
@@ -755,27 +864,42 @@ data: {"error": "something went wrong"}
 
 ```
 Aryabhata/
+├── .github/workflows/
+│   └── ci.yml                    # Lint + typecheck + test + build (frontend & backend), Docker build check on main
 ├── backend/
-│   ├── main.py                   # FastAPI app, CORS (ALLOWED_ORIGINS), SPA fallback
-│   ├── auth.py                   # Clerk JWT verification (PyJWT + JWKS retry)
+│   ├── main.py                   # FastAPI app, CORS (ALLOWED_ORIGINS, fail-closed), SPA fallback
+│   ├── auth.py                   # Clerk JWT verification (PyJWT + JWKS retry, azp check)
 │   ├── database.py               # asyncpg pool, ? → $N placeholder shim, init_db + indexes
 │   ├── models.py                 # Pydantic request models (with input validation)
+│   ├── model_pricing.py          # ★ Illustrative $/1M-token estimates for the eval dashboard
+│   ├── rate_limit.py             # Sliding-window RateLimit (per-user) + RateLimitByIP
 │   ├── requirements.txt
+│   ├── requirements-dev.txt      # + ruff, pytest, pytest-asyncio, pytest-cov
+│   ├── pyproject.toml            # ruff + pytest config
 │   ├── .env.example              # Reference env file for all backend variables
+│   ├── tests/                    # ★ pytest suite (74 tests) — see conftest.py for the fixture design
+│   │   ├── conftest.py           # Header-based test auth, FakeNIMClient, real Postgres per test
+│   │   └── test_*.py             # auth, rate_limit, conversations, arena, sharing, chat, blend, eval, demo
 │   └── routes/
-│       ├── chat.py               # /chat/stream, /chat/name, /route
+│       ├── chat.py               # /chat/stream, /chat/name, /route — now records server-measured telemetry
 │       ├── code.py               # /code/stream
-│       ├── blend.py              # /blend/stream (parallel multi-model SSE)
+│       ├── blend.py              # /blend/stream (sequential, collaborative multi-model SSE)
 │       ├── image.py              # /image/generate (model allowlist + Cloudinary upload)
 │       ├── prompt.py             # /prompt/enhance (Llama 3.2 3B rewrite)
 │       ├── arena.py              # /arena/vote, /arena/leaderboard
-│       └── conversations.py      # CRUD, pin, fork, duplicate, clear, delete-onwards
+│       ├── conversations.py      # CRUD, pin, fork, duplicate, clear, delete-onwards, search
+│       ├── sharing.py            # Public share-link create/revoke/read (expiring, rate-limited read)
+│       ├── eval.py               # ★ /eval/models — benchmarks from real telemetry + Arena votes
+│       └── demo.py               # ★ /demo/status, /demo/chat — unauthenticated, spend-capped
 │
 ├── src/
 │   ├── main.tsx                  # React entry: ErrorBoundary + BrowserRouter + ClerkProvider
-│   ├── App.tsx                   # Root layout, keyboard shortcuts, toast stack, shortcuts modal
+│   ├── ProtectedApp.tsx           # Auth-gated route wrapper (split out of main.tsx for Fast Refresh)
+│   ├── setupTests.ts              # ★ Vitest setup: jest-dom matchers, Radix UI jsdom polyfills
+│   ├── App.tsx                    # Root layout, keyboard shortcuts, toast stack, shortcuts modal
 │   ├── store/
-│   │   └── appStore.ts           # Zustand store (all state + actions, localStorage persist)
+│   │   ├── appStore.ts           # Zustand store (all state + actions, localStorage persist)
+│   │   └── appStore.test.ts      # ★ 28 tests — message/conversation CRUD, blend cap, persistence
 │   ├── components/
 │   │   ├── TopBar.tsx            # Nav bar: breadcrumb (with conv DNA), clocks, Clerk UserButton
 │   │   ├── Sidebar.tsx           # Mode tabs, model search, provider groups, session list (pinning, DNA, multiverse btn)
@@ -784,15 +908,16 @@ Aryabhata/
 │   │   ├── ChatMode.tsx          # Chat thread, Blend voting, fork, retry banner, slash actions
 │   │   ├── CodeMode.tsx          # Monaco editor + AI assistant, ↓ Save button, retry banner
 │   │   ├── ImageMode.tsx         # Image generation UI with inline gallery
-│   │   ├── MessageBubble.tsx     # Message renderer (Markdown, telemetry, timestamp tooltip, vote)
-│   │   ├── ChatInput.tsx         # Composer (Enhance, prompt library, image paste, slash menu, voice mic)
+│   │   ├── MessageBubble.tsx     # Message renderer (Markdown, telemetry, timestamp tooltip, vote) ★ tested
+│   │   ├── ChatInput.tsx         # Composer (Enhance, prompt library, image paste, slash menu, voice mic) ★ tested
 │   │   ├── PersonaGallery.tsx    # 7 built-in + custom persona cards (create/delete inline)
-│   │   ├── CommandPalette.tsx    # ★ Ctrl+P fuzzy-search universal action UI
+│   │   ├── CommandPalette.tsx    # ★ Ctrl+P fuzzy-search universal action UI ★ tested
 │   │   ├── Multiverse.tsx        # ★ Ctrl+M conversation fork tree visualizer
-│   │   ├── Insights.tsx          # ★ Ctrl+I personal analytics dashboard
+│   │   ├── Insights.tsx          # ★ Ctrl+I personal analytics + Model Benchmarks dashboard ★ tested
+│   │   ├── DemoModal.tsx         # ★ Unauthenticated "try it" modal (AuthLayout entry point) ★ tested
 │   │   ├── ConversationDNA.tsx   # ★ Generative SVG fingerprint component
 │   │   ├── SlashMenu.tsx         # ★ Live-filtered slash command suggestions popup
-│   │   ├── ErrorBoundary.tsx     # Full-screen fallback for unhandled component crashes
+│   │   ├── ErrorBoundary.tsx     # Full-screen fallback for unhandled component crashes ★ tested
 │   │   ├── MobileNav.tsx         # Bottom nav bar (Models / Chat / Params / History)
 │   │   └── ContextMenu.tsx       # Right-click context menu (createPortal to document.body)
 │   ├── hooks/
@@ -800,11 +925,11 @@ Aryabhata/
 │   │   ├── useStream.ts          # SSE streaming hook with TTFT / T/s / error callbacks
 │   │   └── useVoice.ts           # ★ Web Speech API hook (interim + final transcripts)
 │   ├── lib/
-│   │   ├── exportConversation.ts # Markdown export (used by sidebar + Ctrl+E)
-│   │   ├── dnaGenerator.ts       # ★ Deterministic SVG fingerprint algorithm (FNV-1a + LCG)
-│   │   ├── fuzzyMatch.ts         # ★ Positional fuzzy matcher for the Command Palette
-│   │   ├── slashCommands.ts      # ★ Slash command registry and dispatch
-│   │   └── utils.ts              # Date formatting, misc helpers
+│   │   ├── exportConversation.ts # Markdown export (used by sidebar + Ctrl+E) ★ tested
+│   │   ├── dnaGenerator.ts       # ★ Deterministic SVG fingerprint algorithm (FNV-1a + LCG) ★ tested
+│   │   ├── fuzzyMatch.ts         # ★ Positional fuzzy matcher for the Command Palette ★ tested
+│   │   ├── slashCommands.ts      # ★ Slash command registry and dispatch ★ tested
+│   │   └── utils.ts              # Date formatting, misc helpers ★ tested
 │   ├── pages/
 │   │   ├── SignInPage.tsx         # Clerk <SignIn routing="path"> with branded theme
 │   │   └── SignUpPage.tsx         # Clerk <SignUp routing="path"> with branded theme
@@ -813,11 +938,25 @@ Aryabhata/
 ├── public/
 │   └── favicon.svg               # Crosshair/reticle brand mark (overridden at runtime per theme)
 ├── .env.example                  # Reference env file for frontend variables
+├── .prettierrc / .prettierignore
+├── vitest config (in vite.config.ts) — jsdom, coverage-v8
 ├── index.html
 ├── vite.config.ts
 ├── tsconfig.json
 └── package.json
 ```
+
+---
+
+## Known Tradeoffs
+
+Documented deliberately rather than left as silent surprises for anyone reading the code closely:
+
+- **Blend Mode is sequential, not parallel.** Each model's response is appended to the next model's system prompt (see `build_collab_system` in `backend/routes/blend.py`), so a 5-model blend round has additive, not concurrent, latency. This is the point — later models can build on or correct earlier ones — but it means "5 models respond" takes roughly 5× one model's latency, not 1×.
+- **JWT `azp` verification is implemented but unconfirmed against a live Clerk token.** `backend/auth.py` checks the `azp` claim against `ALLOWED_ORIGINS` when present, per Clerk's documented manual-JWT guidance — but it only enforces when the claim is actually present, so it fails open on missing claims rather than risk locking out real sessions on an unverified assumption about Clerk's exact token shape.
+- **Model eval costs are estimates, not billing data.** NVIDIA NIM doesn't expose live per-token pricing via API; `backend/model_pricing.py` uses representative figures for comparably-sized hosted models, same "est." framing as the existing CO₂ metric.
+- **Demo mode's spend-cap check isn't fully atomic.** Under a concurrent burst, the daily cap can be overshot by a small, bounded amount (worst case a few cents, given the fixed `max_tokens=300` and cheap-model-only allowlist) rather than exactly zero. A full distributed lock wasn't proportionate for a feature this tightly bounded.
+- **A single set of NVIDIA API keys is shared server-side across all authenticated users** (and, more tightly bounded, demo users). Cost/abuse containment relies entirely on the app's own rate limiters, not per-user provider quotas.
 
 ---
 
